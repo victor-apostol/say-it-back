@@ -1,0 +1,1 @@
+export const messageAccountAlreadyExists = 'An account with this email has already been registered';
