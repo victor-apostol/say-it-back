@@ -1,13 +1,14 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
-import { JwtStrategy } from "./jwt.strategy";
+import { JwtStrategy } from "./strategies/jwt.strategy";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
-import { JwtGuard } from "./auth.guard";
 import { jwtOptions } from "./../../config/options";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../users/entities/user.entity";
 import { UserModule } from "../users/user.module";
+import { OAuthStrategy } from "./strategies/oauth2.strategy";
+import { SessionSerializer } from "src/utils/sessionSerializer";
 
 @Module({
   imports: [
@@ -15,7 +16,12 @@ import { UserModule } from "../users/user.module";
     JwtModule.registerAsync(jwtOptions),
     UserModule,
   ],
+  providers: [
+    AuthService, 
+    JwtStrategy, 
+    OAuthStrategy,
+    SessionSerializer
+  ],
   controllers: [AuthController],
-  providers: [JwtStrategy, AuthService, JwtGuard],
 })
 export class AuthModule {}
