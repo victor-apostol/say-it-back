@@ -6,10 +6,11 @@ import { Request, Response } from "express";
 import { JwtGuard } from "./guards/auth.guard";
 import { OAuthGuard } from "./guards/oauth2.guard";
 import { IJwtPayload } from "./interfaces/jwt.interface";
+import { ConfigService } from "@nestjs/config";
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService, private readonly configService: ConfigService) {}
 
   @Post('register')
   async register(@Body() body: RegisterDto, @Res() response: Response): Promise<void> {
@@ -20,7 +21,7 @@ export class AuthController {
       httpOnly: true, 
     });
     
-    response.send('success');
+    response.redirect(`${this.configService.get("CLIENT_URL")}/feed`);
   }
 
   @Post('login')

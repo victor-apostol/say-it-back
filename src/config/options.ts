@@ -40,7 +40,10 @@ export const configValidationSchema = Joi.object({
   SALT: Joi.number().required(),
 
   OAUTH2_CLIENT_ID: Joi.string().required(),
-  OAUTH2_CLIENT_SECRET: Joi.string().required()
+  OAUTH2_CLIENT_SECRET: Joi.string().required(),
+  OAUTH2_CALLBACKURL: Joi.string().required(),
+
+  CLIENT_URL: Joi.string().required()
 });
 
 export const validationPipeOptions = {
