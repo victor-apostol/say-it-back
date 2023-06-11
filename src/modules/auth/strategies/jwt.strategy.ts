@@ -5,6 +5,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { IJwtPayload } from "../interfaces/jwt.interface";
 import { AuthService } from "../auth.service";
 import { Request } from "express";
+import { User } from "src/modules/users/entities/user.entity";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,11 +15,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         return request.cookies.auth;
       }]),
       ignoreExpiration: false,
-      secretOrKey: cfg.getOrThrow<string>("JWT_SECRET")
+      secretOrKey: cfg.get<string>("JWT_SECRET")
     })
   }
 
-  async validate(payload: IJwtPayload): Promise<boolean> {
+  async validate(payload: IJwtPayload): Promise<User | null> {
     return await this.authService.validateUser(payload.id);
   }
 }

@@ -1,10 +1,10 @@
-import { Post } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtModuleAsyncOptions } from "@nestjs/jwt";
 import { TypeOrmModuleAsyncOptions } from "@nestjs/typeorm";
 import { User } from "src/modules/users/entities/user.entity";
 import * as Joi from 'joi';
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
+import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {
   useFactory: async (cfg: ConfigService): Promise<PostgresConnectionOptions> => ({
@@ -14,7 +14,7 @@ export const typeormOptions: TypeOrmModuleAsyncOptions = {
     username: cfg.get("DB_USERNAME"),
     password: cfg.get("DB_PASSWORD"),
     database: cfg.get("DB_NAME"),
-    entities: [User, Post]
+    entities: [User, Tweet]
   }),
   inject: [ConfigService]
 }
@@ -40,7 +40,10 @@ export const configValidationSchema = Joi.object({
   SALT: Joi.number().required(),
 
   OAUTH2_CLIENT_ID: Joi.string().required(),
-  OAUTH2_CLIENT_SECRET: Joi.string().required()
+  OAUTH2_CLIENT_SECRET: Joi.string().required(),
+  OAUTH2_CALLBACKURL: Joi.string().required(),
+
+  CLIENT_URL: Joi.string().required()
 });
 
 export const validationPipeOptions = {

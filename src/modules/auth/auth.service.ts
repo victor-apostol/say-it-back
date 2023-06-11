@@ -72,8 +72,13 @@ export class AuthService {
     await this.userRepository.save(user);
   }
 
-  async validateUser(id: number): Promise<boolean> {
-    return await this.userRepository.findOneBy({ id }) ? true : false;
+  async validateUser(id: number): Promise<User | null> {
+    const user = await this.userRepository.findOne({ 
+      select: ['id', 'email'],
+      where: { id }
+    }); 
+
+    return user;
   }
 
   _generateToken(payload: IJwt): string {

@@ -10,7 +10,7 @@ export class OAuthStrategy extends PassportStrategy(Strategy) {
     super({
       clientID: configService.get<string>("OAUTH2_CLIENT_ID"),
       clientSecret: configService.get<string>("OAUTH2_CLIENT_SECRET"),
-      callbackURL: "http://localhost:3001/api/auth/redirect",
+      callbackURL: configService.get<string>("OAUTH2_CALLBACKURL"),
       scope: ["email", "profile"]
     })
   }
