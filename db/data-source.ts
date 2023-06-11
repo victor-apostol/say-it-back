@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import { Post } from './../src/modules/posts/entities/post.entity';
 import { User } from './../src/modules/users/entities/user.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { Media } from 'src/modules/media/entities/media.entity';
 
 dotenv.config();
 
@@ -13,7 +14,7 @@ const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, Post],
+  entities: [User, Post, Media],
   migrations: ['dist/migrations/*.js'],
   migrationsTableName: "migrations",
   logging: true
