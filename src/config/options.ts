@@ -3,15 +3,17 @@ import { ConfigService } from "@nestjs/config";
 import { JwtModuleAsyncOptions } from "@nestjs/jwt";
 import { TypeOrmModuleAsyncOptions } from "@nestjs/typeorm";
 import { User } from "src/modules/users/entities/user.entity";
+import * as Joi from 'joi';
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {
-  useFactory: async (cfg: ConfigService) => ({
-    type: cfg.getOrThrow<"postgres" | "mysql">("DB_TYPE"),
-    host: cfg.getOrThrow<string>("DB_HOST"),
-    port: cfg.getOrThrow<number>("DB_PORT"),
-    username: cfg.getOrThrow<string>("DB_USERNAME"),
-    password: cfg.getOrThrow<string>("DB_PASSWORD"),
-    database: cfg.getOrThrow<string>("DB_NAME"),
+  useFactory: async (cfg: ConfigService): Promise<PostgresConnectionOptions> => ({
+    type: cfg.getOrThrow<"postgres">("DB_TYPE"),
+    host: cfg.get("DB_HOST"),
+    port: cfg.get("DB_PORT"),
+    username: cfg.get("DB_USERNAME"),
+    password: cfg.get("DB_PASSWORD"),
+    database: cfg.get("DB_NAME"),
     entities: [User, Post]
   }),
   inject: [ConfigService]
@@ -20,11 +22,26 @@ export const typeormOptions: TypeOrmModuleAsyncOptions = {
 export const jwtOptions: JwtModuleAsyncOptions = {
   useFactory: async (cfg: ConfigService) => ({
     global: true,
-    secret: cfg.getOrThrow<string>("JWT_SECRET"),
+    secret: cfg.get<string>("JWT_SECRET"),
     signOptions: { expiresIn: '360000'}
   }),
   inject: [ConfigService]
 }
+
+export const configValidationSchema = Joi.object({
+  DB_TYPE: Joi.string().required(),
+  DB_USERNAME: Joi.string().required(),
+  DB_PASSWORD: Joi.string().required(),
+  DB_HOST: Joi.string().required(),
+  DB_PORT: Joi.number().required(),
+  DB_NAME: Joi.string().required(),
+
+  JWT_SECRET: Joi.string().required(),
+  SALT: Joi.number().required(),
+
+  OAUTH2_CLIENT_ID: Joi.string().required(),
+  OAUTH2_CLIENT_SECRET: Joi.string().required()
+});
 
 export const validationPipeOptions = {
   forbidNonWhitelisted: true,

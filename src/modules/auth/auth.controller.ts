@@ -1,17 +1,26 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from "@nestjs/common";
-import { JwtGuard } from "./auth.guard";
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
-import { Response } from "express";
+import { Request, Response } from "express";
+import { JwtGuard } from "./guards/auth.guard";
+import { OAuthGuard } from "./guards/oauth2.guard";
+import { IJwtPayload } from "./interfaces/jwt.interface";
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() body: RegisterDto): Promise<void> {
-    return await this.authService.register(body);
+  async register(@Body() body: RegisterDto, @Res() response: Response): Promise<void> {
+    const generatedToken = await this.authService.register(body);
+
+    response.cookie('auth', generatedToken, {
+      maxAge: 24 * 60 * 60 * 1000, 
+      httpOnly: true, 
+    });
+    
+    response.send('success');
   }
 
   @Post('login')
@@ -26,9 +35,26 @@ export class AuthController {
     response.send('success');
   }
 
-  @UseGuards(JwtGuard)
-  @Get('status')
-  async test() {
-    return 'win';
+  @UseGuards(OAuthGuard) 
+  @Get("google")
+  google(): string {
+    return 'success';
+  }
+
+  @UseGuards(OAuthGuard) 
+  @Get('redirect') 
+  async redirect(@Req() req: Request, @Res() response: Response): Promise<void> {
+    const serializedUser = req.user as IJwtPayload;
+    const generatedToken = this.authService._generateToken({
+      email: serializedUser.email, 
+      id: serializedUser.id
+    }); 
+
+    response.cookie('auth', generatedToken, {
+      maxAge: 24 * 60 * 60 * 1000, 
+      httpOnly: true, 
+    });
+    
+    response.send('success');
   }
 }

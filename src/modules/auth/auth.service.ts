@@ -9,6 +9,11 @@ import { User } from "../users/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dto/login.dto";
 
+interface IJwt {
+  id: number;
+  email: string;
+}
+
 @Injectable()
 export class AuthService {
   @InjectRepository(User) 
@@ -16,12 +21,12 @@ export class AuthService {
 
   constructor(private readonly configService: ConfigService, private readonly jwtService: JwtService) {}
 
-  async register(body: RegisterDto): Promise<void> { 
+  async register(body: RegisterDto): Promise<string> { 
     const user = await this.userRepository.findOneBy({ email: body.email });
 
     if (user) throw new BadRequestException(messageAccountAlreadyExists);
 
-    const passwordHash = await bcrypt.hash(body.password, Number(this.configService.getOrThrow<string>('SALT')));
+    const passwordHash = await bcrypt.hash(body.password, Number(this.configService.get<string>('SALT')));
 
     const newUser = this.userRepository.create({
       ...body,
@@ -29,6 +34,11 @@ export class AuthService {
     });
 
     await this.userRepository.save(newUser);
+
+    return this._generateToken({ 
+      id: newUser.id,
+      email: newUser.email 
+    });
   }
 
   async login(body: LoginDto): Promise<string> {
@@ -40,17 +50,33 @@ export class AuthService {
 
     if (!doesPasswordMatch) throw new BadRequestException("Incorrent email or password");
 
-    const generatedToken = this.jwtService.sign({
+    return this._generateToken({ 
       id: user.id,
-      email: body.email
+      email: user.email 
+    });
+  }
+
+  async googleOAuthAuthorization(body: RegisterDto) {
+    let user = await this.userRepository.findOneBy({ email: body.email });
+
+    if (user) return user;
+
+    const generatedPassword = Math.random().toString(36).slice(-8);
+    const passwordHash = await bcrypt.hash(generatedPassword, Number(this.configService.get<string>('SALT')));
+    
+    user = this.userRepository.create({
+      ...body,
+      password: passwordHash
     });
 
-    return generatedToken;
+    await this.userRepository.save(user);
   }
 
   async validateUser(id: number): Promise<boolean> {
-    const user = await this.userRepository.findOneBy({ id });
+    return await this.userRepository.findOneBy({ id }) ? true : false;
+  }
 
-    return user ? true : false;
+  _generateToken(payload: IJwt): string {
+    return this.jwtService.sign(payload);
   }
 }
