@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Res, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
-import { Request, Response } from "express";
-import { JwtGuard } from "./guards/auth.guard";
+import { Response } from "express";
 import { OAuthGuard } from "./guards/oauth2.guard";
 import { IJwtPayload } from "./interfaces/jwt.interface";
+import { AuthUser } from "src/utils/decorators/authUser.decorator";
 import { ConfigService } from "@nestjs/config";
 
 @Controller('auth')
@@ -44,11 +44,10 @@ export class AuthController {
 
   @UseGuards(OAuthGuard) 
   @Get('redirect') 
-  async redirect(@Req() req: Request, @Res() response: Response): Promise<void> {
-    const serializedUser = req.user as IJwtPayload;
+  async redirect(@AuthUser() user: IJwtPayload, @Res() response: Response): Promise<void> {
     const generatedToken = this.authService._generateToken({
-      email: serializedUser.email, 
-      id: serializedUser.id
+      email: user.email, 
+      id: user.id
     }); 
 
     response.cookie('auth', generatedToken, {
