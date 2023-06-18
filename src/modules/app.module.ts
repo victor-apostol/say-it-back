@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { configValidationSchema, typeormOptions } from './../config/options';
 import { PassportModule } from '@nestjs/passport';
 import { TweetModule } from './tweets/tweet.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { TweetModule } from './tweets/tweet.module';
     TypeOrmModule.forRootAsync(typeormOptions),
     UserModule,
     AuthModule,
-    TweetModule
+    TweetModule,
+    MediaModule
   ],
 })
 export class AppModule {}

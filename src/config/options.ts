@@ -5,6 +5,7 @@ import { User } from "src/modules/users/entities/user.entity";
 import * as Joi from 'joi';
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
+import { Media } from "src/modules/media/entities/media.entitiy";
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {
   useFactory: async (cfg: ConfigService): Promise<PostgresConnectionOptions> => ({
@@ -14,7 +15,7 @@ export const typeormOptions: TypeOrmModuleAsyncOptions = {
     username: cfg.get("DB_USERNAME"),
     password: cfg.get("DB_PASSWORD"),
     database: cfg.get("DB_NAME"),
-    entities: [User, Tweet]
+    entities: [User, Tweet, Media]
   }),
   inject: [ConfigService]
 }

@@ -7,7 +7,7 @@ import { AuthService } from "../auth.service";
 import { Request } from "express";
 import { User } from "src/modules/users/entities/user.entity";
 
-@Injectable()
+@Injectable() // do from auth header
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly cfg: ConfigService, private readonly authService: AuthService) {
     super({
