@@ -8,11 +8,7 @@ import { messageAccountAlreadyExists } from "./constants";
 import { User } from "../users/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dto/login.dto";
-
-interface IJwt {
-  id: number;
-  email: string;
-}
+import { IJwtPayload } from "./interfaces/jwt.interface";
 
 @Injectable()
 export class AuthService {
@@ -56,22 +52,6 @@ export class AuthService {
     });
   }
 
-  async googleOAuthAuthorization(body: RegisterDto) {
-    let user = await this.userRepository.findOneBy({ email: body.email });
-
-    if (user) return user;
-
-    const generatedPassword = Math.random().toString(36).slice(-8);
-    const passwordHash = await bcrypt.hash(generatedPassword, Number(this.configService.get<string>('SALT')));
-    
-    user = this.userRepository.create({
-      ...body,
-      password: passwordHash
-    });
-
-    await this.userRepository.save(user);
-  }
-
   async validateUser(id: number): Promise<User | null> {
     const user = await this.userRepository.findOne({ 
       select: ['id', 'email'],
@@ -81,7 +61,7 @@ export class AuthService {
     return user;
   }
 
-  _generateToken(payload: IJwt): string {
+  _generateToken(payload: IJwtPayload): string {
     return this.jwtService.sign(payload);
   }
 }

@@ -7,8 +7,6 @@ import { jwtOptions } from "./../../config/options";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../users/entities/user.entity";
 import { UserModule } from "../users/user.module";
-import { OAuthStrategy } from "./strategies/oauth2.strategy";
-import { SessionSerializer } from "src/utils/sessionSerializer";
 
 @Module({
   imports: [
@@ -19,8 +17,6 @@ import { SessionSerializer } from "src/utils/sessionSerializer";
   providers: [
     AuthService, 
     JwtStrategy, 
-    OAuthStrategy,
-    SessionSerializer
   ],
   controllers: [AuthController],
 })
