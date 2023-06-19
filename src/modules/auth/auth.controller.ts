@@ -6,33 +6,25 @@ import { Response } from "express";
 import { IJwtPayload } from "./interfaces/jwt.interface";
 import { AuthUser } from "src/utils/decorators/authUser.decorator";
 import { ConfigService } from "@nestjs/config";
+import { JwtGuard } from "./guards/auth.guard";
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService, private readonly configService: ConfigService) {}
 
+  @UseGuards(JwtGuard)
+  @Get('info')
+  async getAuthInfo(@AuthUser() user: IJwtPayload): Promise<IJwtPayload> {
+    return user;
+  }
+  
   @Post('register')
   async register(@Body() body: RegisterDto): Promise<string> {
     return await this.authService.register(body);
   }
 
   @Post('login')
-  async login(@Body() body: LoginDto): Promise<string> {
-    return await this.authService.login(body);
+  async login(@Body() body: LoginDto): Promise<{ token: string }> {
+    return { token: await this.authService.login(body) };
   }
-
-  // @UseGuards(OAuthGuard) 
-  // @Get("google")
-  // google(): string {
-  //   return 'success';
-  // }
-
-//   @UseGuards(OAuthGuard) 
-//   @Get('redirect') 
-//   async redirect(@AuthUser() user: IJwtPayload): Promise<void> {
-//     return this.authService._generateToken({
-//       email: user.email, 
-//       id: user.id
-//     }); 
-//   }
 }
