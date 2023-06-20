@@ -1,5 +1,5 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { validationPipeOptions } from './config/options';
 import { AppModule } from './modules/app.module';
 
@@ -13,7 +13,6 @@ async function bootstrap() {
     ]
   })
   
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(new ValidationPipe(validationPipeOptions));
   app.setGlobalPrefix('/api');
 
