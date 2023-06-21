@@ -52,12 +52,18 @@ export class AuthService {
     });
   }
 
-  async validateUser(id: number): Promise<User | null> {
+  async validateUser(id: number): Promise<Omit<User, 'password'> | null> {
     const user = await this.userRepository.findOne({ 
       where: { id }
     }); 
     
-    return user;
+    if (user) {
+      const { password, ...restuser } = user; 
+
+      return restuser;
+    }
+
+    return null;
   }
 
   _generateToken(payload: IJwtPayload): string {

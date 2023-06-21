@@ -1,22 +1,24 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './users/user.module';
-import { AuthModule } from './auth/auth.module';
-import { configValidationSchema, typeormOptions } from './../config/options';
-import { PassportModule } from '@nestjs/passport';
-import { TweetModule } from './tweets/tweet.module';
-import { MediaModule } from './media/media.module';
+import { UserModule } from '@/modules/users/user.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { TweetModule } from '@/modules/tweets/tweet.module';
+import { MediaModule } from '@/modules/media/media.module';
+import { LikeModule } from '@/modules/likes/like.module';
+import { configValidationSchema, typeormOptions } from '@/config/options';
+import { CommentModule } from '@/modules/comments/comment.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validationSchema: configValidationSchema }),
-    PassportModule.register({ session: true }),
     TypeOrmModule.forRootAsync(typeormOptions),
     UserModule,
     AuthModule,
     TweetModule,
-    MediaModule
+    MediaModule,
+    LikeModule,
+    CommentModule
   ],
 })
 export class AppModule {}

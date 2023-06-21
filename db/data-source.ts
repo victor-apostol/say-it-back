@@ -1,9 +1,7 @@
 
 import * as dotenv from 'dotenv';
-import { Tweet } from './../src/modules/tweets/entities/tweet.entity';
-import { User } from './../src/modules/users/entities/user.entity';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { Media } from 'src/modules/media/entities/media.entitiy';
+import { entitiesToLoad } from '@/config/options';
 
 dotenv.config();
 
@@ -14,7 +12,7 @@ const dataSourceOptions: DataSourceOptions = {
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [User, Tweet, Media],
+  entities: entitiesToLoad,
   migrations: ['dist/migrations/*.js'],
   migrationsTableName: "migrations",
   logging: true

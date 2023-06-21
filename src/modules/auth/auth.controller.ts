@@ -1,12 +1,11 @@
-import { Body, Controller, Get, Post, Res, UseGuards } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { RegisterDto } from "./dto/register.dto";
-import { LoginDto } from "./dto/login.dto";
-import { Response } from "express";
-import { IJwtPayload } from "./interfaces/jwt.interface";
-import { AuthUser } from "src/utils/decorators/authUser.decorator";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { AuthService } from "@/modules/auth/auth.service";
+import { RegisterDto } from "@/modules/auth/dto/register.dto";
+import { LoginDto } from "@/modules/auth/dto/login.dto";
+import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
+import { AuthUser } from "@/utils/decorators/authUser.decorator";
 import { ConfigService } from "@nestjs/config";
-import { JwtGuard } from "./guards/auth.guard";
+import { JwtGuard } from "@/modules/auth/guards/auth.guard";
 
 @Controller('auth')
 export class AuthController {

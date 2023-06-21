@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     })
   }
 
-  async validate(payload: IJwtPayload): Promise<User | null> {
+  async validate(payload: IJwtPayload): Promise<Omit<User, 'password'> | null> {
     return await this.authService.validateUser(payload.id);
   }
 }
