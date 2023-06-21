@@ -1,5 +1,8 @@
 export enum MediaTypes {
-  USER = 'user',
-  CREATOR = 'creator',
-  ADMIN = 'admin',
+  IMAGE = 'image',
+  VIDEO = 'video',
+  AUDIO = 'audio'
 }
+
+export const maxFilesCount = 7;
+export const fileMaxSizeInKb = 100000;
