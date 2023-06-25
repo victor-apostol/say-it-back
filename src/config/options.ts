@@ -48,11 +48,13 @@ export const configValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   SALT: Joi.number().required(),
 
-  OAUTH2_CLIENT_ID: Joi.string().required(),
-  OAUTH2_CLIENT_SECRET: Joi.string().required(),
-  OAUTH2_CALLBACKURL: Joi.string().required(),
+  CLIENT_URL: Joi.string().required(),
 
-  CLIENT_URL: Joi.string().required()
+  AWS_S3_REGION: Joi.string().required(),
+  AWS_S3_BUCKET: Joi.string().required(),
+  AWS_ACCESS_KEY: Joi.string().required(),
+  AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+  AWS_RETRY_TIMES: Joi.number().required()
 });
 
 export const validationPipeOptions = {

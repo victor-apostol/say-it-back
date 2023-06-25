@@ -2,15 +2,15 @@ import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { Comment } from "@/modules/comments/entitites/comment.entity";
-import { LikeableTargets } from "@/modules/likes/constants";
+import { TargetsTypes } from "@/utils/global.constants";
 
 @Entity('likes')
 export class Like {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'enum', enum: LikeableTargets })
-  likeable_target:  keyof typeof LikeableTargets;
+  @Column({ type: 'enum', enum: TargetsTypes })
+  target: TargetsTypes;
 
   @ManyToOne(() => Tweet, (tweet) => tweet.likes)
   tweet: Tweet;

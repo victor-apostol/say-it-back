@@ -1,3 +1,4 @@
+import { defaultUserAvatarPath } from "@/utils/global.constants";
 import { Exclude } from "class-transformer";
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
@@ -14,6 +15,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 128, unique: true })
   email: string;
+
+  @Column({ type: 'varchar', length: 128, default: defaultUserAvatarPath})
+  avatar: string; 
   
   @Exclude()
   @Column({ type: 'varchar', length: 128})

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { CreateTweetDto } from "../dto/createTweet.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { CreateTweetDto } from "../dto/createTweet.dto";
 import { Tweet } from "../entities/tweet.entity";
-import { IJwtPayload } from "src/modules/auth/interfaces/jwt.interface";
-import { UserService } from "src/modules/users/services/user.service";
-import { messageUserNotFound } from "src/modules/auth/constants";
+import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
+import { UserService } from "@/modules/users/services/user.service";
+import { messageUserNotFound } from "@/utils/global.constants";
 
 @Injectable()
 export class TweetsService {
@@ -21,7 +21,8 @@ export class TweetsService {
 
     const tweet = this.tweetsRepository.create({
       ...body,
-      user
+      user,
+      media: []
     });
 
     await this.tweetsRepository.save(tweet);
@@ -39,7 +40,8 @@ export class TweetsService {
     return await this.tweetsRepository.find({
       where: {
         user: { id: user.id }
-      }
+      },
+      relations: ['media', 'user'] // wont exclude password fix this
     });
   }
 }

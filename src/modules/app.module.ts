@@ -11,7 +11,10 @@ import { CommentModule } from '@/modules/comments/comment.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validationSchema: configValidationSchema }),
+    ConfigModule.forRoot({ 
+      isGlobal: true, 
+      validationSchema: configValidationSchema 
+    }),
     TypeOrmModule.forRootAsync(typeormOptions),
     UserModule,
     AuthModule,
