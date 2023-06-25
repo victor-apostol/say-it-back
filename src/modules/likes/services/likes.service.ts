@@ -8,12 +8,12 @@ import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { Comment } from "@/modules/comments/entitites/comment.entity";
 import { 
-  LikeableTargets, 
+  TargetsTypes, 
   messageCommentNotFound, 
-  messageTargetIsAlreadyLiked, 
   messageTweetNotFound, 
   messageUserNotFound 
-} from "@/modules/likes/constants";
+} from "@/utils/global.constants";
+import { messageTargetIsAlreadyLiked } from "../constants";
 
 @Injectable()
 export class LikesService {
@@ -41,9 +41,9 @@ export class LikesService {
       const user = await this.userRepository.findOneBy({ id: authUser.id }); console.log(user)
       if (!user) throw new BadRequestException(messageUserNotFound);
 
-      const [targetRepository, relation, errorMessage, selector] = body.likeable_target === "TWEET".toLowerCase()
-        ? [this.tweetRepository, { tweet: undefined }, messageTweetNotFound, LikeableTargets.TWEET]
-        : [this.commentRepository, { comment: undefined }, messageCommentNotFound, LikeableTargets.COMMENT];
+      const [targetRepository, relation, errorMessage, selector] = body.target === "TWEET".toLowerCase()
+        ? [this.tweetRepository, { tweet: undefined }, messageTweetNotFound, TargetsTypes.TWEET]
+        : [this.commentRepository, { comment: undefined }, messageCommentNotFound, TargetsTypes.COMMENT];
 
       const target = await targetRepository.findOneBy({ id: body.targetId }); 
       if (!target) throw new BadRequestException(errorMessage);
@@ -54,7 +54,7 @@ export class LikesService {
         where: {  
           user,
           ...relation,
-          likeable_target: body.likeable_target
+          target: body.target
         },
         select: [selector]
       });
@@ -64,7 +64,7 @@ export class LikesService {
       const likeObject = this.likeRepository.create({
         user,
         ...relation,
-        likeable_target: body.likeable_target
+        target: body.target
       });
 
       target.likes_count += 1;

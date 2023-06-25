@@ -1,11 +1,11 @@
 import { IsEnum, IsNumber, Min } from "class-validator";
-import { LikeableTargets } from "@/modules/likes/constants";
+import { TargetsTypes } from "@/utils/global.constants";
 
 export class CreateLikeDto {  
   @IsNumber()
   @Min(0)
   targetId: number;
 
-  @IsEnum(LikeableTargets)
-  likeable_target: keyof typeof LikeableTargets;
+  @IsEnum(TargetsTypes)
+  target: TargetsTypes;
 }

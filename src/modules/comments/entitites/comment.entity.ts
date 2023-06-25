@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Like } from "@/modules/likes/entities/like.entity";
+import { Media } from "@/modules/media/entities/media.entitiy";
 
 @Entity('comments')
 export class Comment {
@@ -14,4 +15,7 @@ export class Comment {
 
   @OneToMany(() => Like, (like) => like.comment)
   likes: Like[];
+
+  @OneToMany(() => Media, (media) => media.comment) 
+  media: Media[];
 }
