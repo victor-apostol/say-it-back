@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { UserModule } from "@/modules/users/user.module";
+import { UsersModule } from "@/modules/users/users.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { TweetsController } from "@/modules/tweets/controllers/tweets.controller";
 import { TweetsService } from "@/modules/tweets/services/tweets.service";
@@ -9,10 +9,10 @@ import { Like } from "typeorm";
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tweet, Like]),
-    UserModule
+    UsersModule
   ],
   controllers: [TweetsController],
   providers: [TweetsService],
   exports: []
 })
-export class TweetModule {}
+export class TweetsModule {}

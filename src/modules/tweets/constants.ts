@@ -4,4 +4,3 @@ export enum TargetsTypes {
 }
 
 export const tweetsPath='tweets';
-export const likesPath = 'likes';

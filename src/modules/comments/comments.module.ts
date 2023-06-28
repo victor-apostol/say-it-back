@@ -12,4 +12,4 @@ import { User } from "@/modules/users/entities/user.entity";
   providers: [CommentsService],
   controllers: [CommentsController]
 })
-export class CommentModule {}
+export class CommentsModule {}

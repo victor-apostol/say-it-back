@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from '@/modules/users/user.module';
+import { UsersModule } from '@/modules/users/users.module';
 import { AuthModule } from '@/modules/auth/auth.module';
-import { TweetModule } from '@/modules/tweets/tweet.module';
+import { TweetsModule } from '@/modules/tweets/tweets.module';
 import { MediaModule } from '@/modules/media/media.module';
-import { LikeModule } from '@/modules/likes/like.module';
+import { LikesModule } from '@/modules/likes/likes.module';
+import { CommentsModule } from '@/modules/comments/comments.module';
 import { configValidationSchema, typeormOptions } from '@/config/options';
-import { CommentModule } from '@/modules/comments/comment.module';
 
 @Module({
   imports: [
@@ -16,12 +16,12 @@ import { CommentModule } from '@/modules/comments/comment.module';
       validationSchema: configValidationSchema 
     }),
     TypeOrmModule.forRootAsync(typeormOptions),
-    UserModule,
+    UsersModule,
     AuthModule,
-    TweetModule,
+    TweetsModule,
     MediaModule,
-    LikeModule,
-    CommentModule
+    LikesModule,
+    CommentsModule
   ],
 })
 export class AppModule {}

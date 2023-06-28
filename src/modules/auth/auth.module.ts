@@ -6,13 +6,13 @@ import { AuthService } from "./auth.service";
 import { jwtOptions } from "./../../config/options";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../users/entities/user.entity";
-import { UserModule } from "../users/user.module";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync(jwtOptions),
-    UserModule,
+    UsersModule,
   ],
   providers: [
     AuthService, 

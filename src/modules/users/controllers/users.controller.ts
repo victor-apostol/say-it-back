@@ -1,12 +1,12 @@
 import { BadRequestException, ClassSerializerInterceptor, Controller, Get, Param, ParseIntPipe, UseGuards, UseInterceptors } from "@nestjs/common";
 import { JwtGuard } from "src/modules/auth/guards/auth.guard";
 import { usersPath } from "../constants";
-import { UserService } from "../services/user.service";
+import { UsersService } from "../services/users.service";
 
 @UseGuards(JwtGuard)
 @Controller(usersPath)
-export class UserController {
-  constructor(private readonly usersService: UserService) {}
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
 
   @Get(":id")
   async secret(@Param('id', ParseIntPipe) id: number) {

@@ -15,4 +15,4 @@ import { Comment } from "@/modules/comments/entitites/comment.entity";
   providers: [LikesService],
   exports: [LikesService]
 })
-export class LikeModule {}
+export class LikesModule {}
