@@ -6,6 +6,7 @@ import { Tweet } from "../entities/tweet.entity";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { UsersService } from "@/modules/users/services/users.service";
 import { messageUserNotFound } from "@/utils/global.constants";
+import { IPaginatedTweets } from "../interfaces/paginate_tweets.interface";
 
 @Injectable()
 export class TweetsService {
@@ -16,7 +17,6 @@ export class TweetsService {
 
   async createTweet(authUser: IJwtPayload, body: CreateTweetDto): Promise<void> {
     const user = await this.usersService.findUser(authUser.id);
- 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
     const tweet = this.tweetsRepository.create({
@@ -32,16 +32,33 @@ export class TweetsService {
     return await this.tweetsRepository.findOneBy({ id });
   }
 
-  async getUserTweets(userId: number): Promise<Array<Tweet>> {
-    const user = await this.usersService.findUser(userId);
-    
+  async getUserTweets(userId: number, page = 0, count = 5): Promise<IPaginatedTweets> {
+    const user = await this.usersService.findUser(userId); 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
-    return await this.tweetsRepository.find({
+    const tweets = await this.tweetsRepository.find({
       where: {
         user: { id: user.id }
       },
-      relations: ['media', 'user'] // wont exclude password fix this
+      relations: ['media', 'user'], 
+      select: { 
+        user: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          avatar: true,
+        }
+      },
+      skip: page,
+      take: count + 1
     });
+
+    const hasMore = tweets.length > count;
+
+    return {
+      tweets: tweets.slice(0, count), 
+      hasMore
+    }
   }
 }
