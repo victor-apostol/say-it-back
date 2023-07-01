@@ -1,18 +1,24 @@
 import { Module } from "@nestjs/common";
-import { UsersModule } from "@/modules/users/users.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { UsersModule } from "@/modules/users/users.module";
+import { MediaModule } from "../media/media.module";
+import { Like } from "@/modules/likes/entities/like.entity";
+import { Tweet } from "@/modules/tweets/entities/tweet.entity";
+import { Media } from "@/modules/media/entities/media.entitiy";
+import { User } from "@/modules/users/entities/user.entity";
 import { TweetsController } from "@/modules/tweets/controllers/tweets.controller";
 import { TweetsService } from "@/modules/tweets/services/tweets.service";
-import { Tweet } from "@/modules/tweets/entities/tweet.entity";
-import { Like } from "typeorm";
+import { StorageService } from "@/modules/media/services/storage.service";
+import { MediaService } from "@/modules/media/services/media.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tweet, Like]),
-    UsersModule
+    TypeOrmModule.forFeature([Tweet, Like, Media, User]),
+    UsersModule,
+    MediaModule
   ],
   controllers: [TweetsController],
-  providers: [TweetsService],
+  providers: [TweetsService, StorageService, MediaService],
   exports: []
 })
 export class TweetsModule {}

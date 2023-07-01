@@ -6,7 +6,6 @@ import { AuthModule } from '@/modules/auth/auth.module';
 import { TweetsModule } from '@/modules/tweets/tweets.module';
 import { MediaModule } from '@/modules/media/media.module';
 import { LikesModule } from '@/modules/likes/likes.module';
-import { CommentsModule } from '@/modules/comments/comments.module';
 import { configValidationSchema, typeormOptions } from '@/config/options';
 
 @Module({
@@ -21,7 +20,6 @@ import { configValidationSchema, typeormOptions } from '@/config/options';
     TweetsModule,
     MediaModule,
     LikesModule,
-    CommentsModule
   ],
 })
 export class AppModule {}

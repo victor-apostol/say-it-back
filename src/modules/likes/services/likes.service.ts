@@ -6,14 +6,8 @@ import { CreateLikeDto } from "@/modules/likes/dto/create.dto";
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
-import { Comment } from "@/modules/comments/entitites/comment.entity";
-import { 
-  TargetsTypes, 
-  messageCommentNotFound, 
-  messageTweetNotFound, 
-  messageUserNotFound 
-} from "@/utils/global.constants";
-import { messageTargetIsAlreadyLiked } from "../constants";
+import { messageTweetNotFound, messageUserNotFound } from "@/utils/global.constants";
+import { messageTweetIsAlreadyLiked } from "../constants";
 
 @Injectable()
 export class LikesService {
@@ -26,53 +20,41 @@ export class LikesService {
   @InjectRepository(Like)
   private readonly likeRepository: Repository<Like>;
 
-  @InjectRepository(Comment)
-  private readonly commentRepository: Repository<Comment>;
-
   constructor(private readonly dataSource: DataSource) {}
 
-  async likeTarget(authUser: IJwtPayload, body: CreateLikeDto): Promise<void | BadRequestException> { 
+  async likeTweet(authUser: IJwtPayload, body: CreateLikeDto): Promise<void | BadRequestException> { 
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      const user = await this.userRepository.findOneBy({ id: authUser.id }); console.log(user)
+      const user = await this.userRepository.findOneBy({ id: authUser.id });
       if (!user) throw new BadRequestException(messageUserNotFound);
 
-      const [targetRepository, relation, errorMessage, selector] = body.target === "TWEET".toLowerCase()
-        ? [this.tweetRepository, { tweet: undefined }, messageTweetNotFound, TargetsTypes.TWEET]
-        : [this.commentRepository, { comment: undefined }, messageCommentNotFound, TargetsTypes.COMMENT];
-
-      const target = await targetRepository.findOneBy({ id: body.targetId }); 
-      if (!target) throw new BadRequestException(errorMessage);
-
-      relation[Object.keys(relation)[0]] = target;
+      const tweet = await this.tweetRepository.findOneBy({ id: body.tweetId }); 
+      if (!tweet) throw new BadRequestException(messageTweetNotFound);
   
-      const isTargetLiked = await this.likeRepository.findOne({ 
+      const isTweetLiked = await this.likeRepository.findOne({ 
         where: {  
           user,
-          ...relation,
-          target: body.target
-        },
-        select: [selector]
+          tweet
+        }
       });
   
-      if (isTargetLiked) throw new BadRequestException(messageTargetIsAlreadyLiked);
+      if (isTweetLiked) throw new BadRequestException(messageTweetIsAlreadyLiked);
   
       const likeObject = this.likeRepository.create({
         user,
-        ...relation,
-        target: body.target
+        tweet
       });
 
-      target.likes_count += 1;
+      tweet.likes_count += 1;
 
       await queryRunner.manager.save(likeObject);
-      await queryRunner.manager.save(target);
+      await queryRunner.manager.save(tweet);
       
-      await queryRunner.commitTransaction(); // could return update tweets / comment likes to front
+      await queryRunner.commitTransaction(); // could return update tweets likes to front
     } catch(err) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(err?.message);

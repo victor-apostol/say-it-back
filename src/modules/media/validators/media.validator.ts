@@ -13,9 +13,7 @@ export class MediaValidator extends FileValidator<ValidationOptions> {
     super(validationOptions);
   }
 
-  public async isValid(file?: Express.Multer.File): Promise<boolean> {
-    if (!file) return false;
-    
+  public async isValid(file: Express.Multer.File): Promise<boolean> {
     if (file.size > this.validationOptions.maxSize) {
       this.errorMessage = `File size is too big must be at max ${fileMaxSizeInKb} KB`;
 

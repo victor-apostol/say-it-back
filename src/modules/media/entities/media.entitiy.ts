@@ -1,7 +1,6 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 import { User } from "src/modules/users/entities/user.entity";
-import { Comment } from "@/modules/comments/entitites/comment.entity";
 import { MediaTypes } from "@/modules/media/constants";
 
 @Entity('media')
@@ -20,7 +19,4 @@ export class Media {
 
   @ManyToOne(() => Tweet, (tweet) => tweet.id)
   tweet: Tweet;
-
-  @ManyToOne(() => Comment, (comment) => comment.id)
-  comment: Comment;
 }

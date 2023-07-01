@@ -1,11 +1,14 @@
-import { IsNumberString, IsOptional, isNumberString } from "class-validator";
+import { Transform } from "class-transformer";
+import { IsNumber, IsNumberString, IsOptional } from "class-validator";
 
 export class TweetPaginationDto {
   @IsOptional()
-  @IsNumberString()
-  page?: number;
+  @IsNumber()
+  @Transform(({ value }) => parseInt(value))
+  offset?: number;
 
   @IsOptional()
-  @IsNumberString()
+  @IsNumber()
+  @Transform(({ value }) => parseInt(value))
   count?: number;
 }
