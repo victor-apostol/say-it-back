@@ -13,7 +13,7 @@ export class LikesController {
   constructor(private readonly likesService: LikesService) {}
 
   @Post('')
-  async likeTarget(@AuthUser() user: IJwtPayload, @Body() body: CreateLikeDto): Promise<void> {
-    await this.likesService.likeTarget(user, body);
+  async likeTweet(@AuthUser() user: IJwtPayload, @Body() body: CreateLikeDto): Promise<void> {
+    await this.likesService.likeTweet(user, body);
   }
 }

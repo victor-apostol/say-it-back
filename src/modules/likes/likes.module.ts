@@ -5,11 +5,10 @@ import { LikesController } from "@/modules/likes/controllers/likes.controller";
 import { LikesService } from "@/modules/likes/services/likes.service";
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
-import { Comment } from "@/modules/comments/entitites/comment.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Like, Tweet, User, Comment])
+    TypeOrmModule.forFeature([Like, Tweet, User])
   ],
   controllers: [LikesController],
   providers: [LikesService],

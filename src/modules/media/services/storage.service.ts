@@ -1,17 +1,15 @@
 import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { ConfigService } from "@nestjs/config";
-import { DataSource } from "typeorm";
+import { DataSource, QueryRunner } from "typeorm";
 import { MediaService } from "./media.service";
 import { MediaTypes, messageServicesSideError } from "../constants";
-import { TargetsTypes } from "@/utils/global.constants";
 
 @Injectable()
 export class StorageService {
   constructor(
     private readonly configService: ConfigService, 
     private readonly mediaService: MediaService,
-    private readonly dataSource: DataSource, 
   ) {}
 
   private readonly S3client = new S3Client({
@@ -28,15 +26,10 @@ export class StorageService {
   async uploadFileToS3Bucket(
     files: Array<Express.Multer.File>, 
     userId: number, 
-    targetId: number, 
+    tweetId: number, 
     mediaType: MediaTypes,
-    targetType: TargetsTypes
+    queryRunner: QueryRunner
   ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     try {
       const dateFormat = new Date().toLocaleString('en-US', {
         year: 'numeric',
@@ -49,10 +42,10 @@ export class StorageService {
 
       await Promise.all(
         files.map(async (file) => {
-          const parsedFilename = `${dateFormat}_${file.originalname}`;
+          const parsedFilename = `${dateFormat}_${file.originalname}`.replace(/\s/g, "");
           const fileLocation = `https://${this.S3Bucket}.s3.amazonaws.com/${parsedFilename}`;
           
-          await this.mediaService.saveFilePath(fileLocation, userId, targetId, mediaType, targetType, queryRunner);
+          await this.mediaService.saveFilePath(fileLocation, userId, tweetId, mediaType, queryRunner);
           
           const S3Response = await this.S3client.send(
             new PutObjectCommand({
@@ -65,13 +58,8 @@ export class StorageService {
           if (S3Response.$metadata.httpStatusCode !== 200) throw new Error();
         })
       );
-
-      await queryRunner.commitTransaction();
     } catch(err) {
-      await queryRunner.rollbackTransaction();
       throw new InternalServerErrorException(messageServicesSideError);
-    } finally {
-      await queryRunner.release();
     }
   }
 }

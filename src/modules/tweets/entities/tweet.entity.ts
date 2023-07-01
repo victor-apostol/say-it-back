@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Media } from "@/modules/media/entities/media.entitiy";
@@ -13,6 +13,10 @@ export class Tweet {
 
   @Column({ type: 'integer', default: 0 })
   likes_count: number;
+
+  @ManyToOne(() => Tweet, (tweet) => tweet.id)
+  @JoinColumn()
+  parent_tweet: Tweet;
 
   @OneToMany(() => Like, (like) => like.tweet)
   likes: Like[];
