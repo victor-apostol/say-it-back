@@ -14,6 +14,9 @@ export class Tweet {
   @Column({ type: 'integer', default: 0 })
   likes_count: number;
 
+  @Column({ type: 'integer', default: 0 })
+  replies_count: number;
+
   @ManyToOne(() => Tweet, (tweet) => tweet.id)
   @JoinColumn()
   parent_tweet: Tweet;

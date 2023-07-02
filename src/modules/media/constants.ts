@@ -4,6 +4,6 @@ export enum MediaTypes {
   AUDIO = 'audio'
 }
 
-export const maxFilesCount = 7;
+export const maxFilesCount = 4;
 export const fileMaxSizeInKb = 1000000;
 export const messageServicesSideError = "Services side error, could'not upload the files"
