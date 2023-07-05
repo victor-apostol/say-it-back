@@ -6,9 +6,10 @@ import { CreateTweetDto } from "../dto/createTweet.dto";
 import { UsersService } from "@/modules/users/services/users.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { MediaTypes } from "@/modules/media/constants";
-import { IPaginatedTweets } from "../interfaces/paginate_tweets.interface";
+import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
-import { messageParentTweetDoesNotExist, messageTweetCouldNotBeCreated, messageUserNotFound } from "@/utils/global.constants";
+import { messageParentTweetDoesNotExist, messageTweetCouldNotBeCreated, messageTweetNotFound, messageUserNotFound } from "@/utils/global.constants";
+import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 
 @Injectable()
 export class TweetsService {
@@ -25,7 +26,6 @@ export class TweetsService {
     authUser: IJwtPayload, 
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
-    parent_id: number | undefined = undefined, 
     media_type = MediaTypes.IMAGE
   ): Promise<Tweet> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -37,9 +37,12 @@ export class TweetsService {
 
       let parent_tweet: Tweet | null | undefined = undefined;
 
-      if (parent_id) {
-        parent_tweet = await this.tweetsRepository.findOneBy({ id: parent_id });
+      if (body.parent_id) {
+        parent_tweet = await this.tweetsRepository.findOneBy({ id: body.parent_id });
         if (!parent_tweet) throw new BadRequestException(messageParentTweetDoesNotExist);
+
+        parent_tweet.replies_count += 1;
+        await queryRunner.manager.save(parent_tweet);
       } 
 
       const tweet = this.tweetsRepository.create({
@@ -48,24 +51,20 @@ export class TweetsService {
         media: [],
         parent_tweet
       });
-
       await queryRunner.manager.save(tweet);
-
-      if (files.length > 0) await this.storageService.uploadFileToS3Bucket(files, authUser.id, tweet.id, media_type, queryRunner); 
-
+      
+      if (files?.length > 0) await this.storageService.uploadFileToS3Bucket(files, authUser.id, tweet.id, media_type, queryRunner); 
+      
       await queryRunner.commitTransaction();
 
       return tweet;
     } catch(err) {
+      console.log(err)
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
     } finally {
       await queryRunner.release();
     }
-  }
-
-  async getTweet(id: number): Promise<Tweet | null> {
-    return await this.tweetsRepository.findOneBy({ id });
   }
 
   async getUserTweets(userId: number, offset = 0, count = 5): Promise<IPaginatedTweets> {
@@ -87,9 +86,12 @@ export class TweetsService {
         }
       },
       skip: offset,
-      take: count + 1
+      take: count + 1,
+      order: {
+        id: 'ASC'
+      }
     });
-
+    console.log(tweets.slice(0, count))
     const hasMore = tweets.length > count;
     
     return {
@@ -97,4 +99,47 @@ export class TweetsService {
       hasMore
     }
   }
+
+  async getTweet(userId: number, tweetId: number): Promise<ITweetResponse> {
+    const user = await this.usersService.findUser(userId);
+    if(!user) throw new BadRequestException(messageUserNotFound);
+
+    const tweet = await this.tweetsRepository.findOne({ 
+      where: { 
+        id: tweetId 
+      }, 
+      relations: ['media', 'user'], 
+      select: { 
+        user: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          avatar: true,
+        }
+      },
+    });
+    if (!tweet) throw new BadRequestException(messageTweetNotFound);
+
+    const replies = await this.tweetsRepository.find({
+      where: {
+        parent_tweet: tweet
+      },
+      relations: ['media', 'user'], 
+      select: { 
+        user: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          avatar: true,
+        }
+      },
+    });
+
+    return {
+      tweet: tweet,
+      replies: replies
+    }
+  } 
 }

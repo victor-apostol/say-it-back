@@ -19,25 +19,26 @@ import { AuthUser } from "src/utils/decorators/authUser.decorator";
 import { IJwtPayload } from "src/modules/auth/interfaces/jwt.interface";
 import { Tweet } from "../entities/tweet.entity";
 import { TweetPaginationDto } from "../dto/pagination.dto";
-import { IPaginatedTweets } from "../interfaces/paginate_tweets.interface";
+import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { fileMaxSizeInKb, maxFilesCount } from "@/modules/media/constants";
 import { MediaValidator } from "@/modules/media/validators/media.validator";
+import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
 export class TweetsController {
   constructor(private readonly tweetsService: TweetsService) {}
 
-  @Get('user/:userId')
+  @Get('user/:userId') // return if tweet is liked property
   async getUserTweets(@Param('userId', ParseIntPipe) userId: number, @Query() query: TweetPaginationDto): Promise<IPaginatedTweets> {
     return await this.tweetsService.getUserTweets(userId, query.offset, query.count);
   }
 
-  @Get(':id')
-  async getTweet(@Param('id', ParseIntPipe) id: number): Promise<Tweet | null> {
-    return await this.tweetsService.getTweet(id);
-  }
+  @Get('/user/:userId/:tweetId') // return if tweet is liked property
+  async getTweet(@Param('userId', ParseIntPipe) userId: number, @Param('tweetId', ParseIntPipe) tweetId: number): Promise<ITweetResponse> {
+    return await this.tweetsService.getTweet(userId, tweetId);
+  } 
   
   @Post('')
   @UseInterceptors(FilesInterceptor('files[]', maxFilesCount, { limits: { files: maxFilesCount } }))
