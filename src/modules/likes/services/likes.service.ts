@@ -22,7 +22,7 @@ export class LikesService {
 
   constructor(private readonly dataSource: DataSource) {}
 
-  async likeTweet(authUser: IJwtPayload, body: CreateLikeDto): Promise<void | BadRequestException> { 
+  async createLike(authUser: IJwtPayload, body: CreateLikeDto): Promise<any | BadRequestException> { 
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -38,7 +38,7 @@ export class LikesService {
       const isTweetLiked = await this.likeRepository.findOne({ 
         where: {  
           user,
-          tweet
+          tweet: { id: tweet.id}          
         }
       });
   
@@ -48,13 +48,47 @@ export class LikesService {
         user,
         tweet
       });
+    
+      tweet.likes_count = tweet.likes_count + 1;
 
-      tweet.likes_count += 1;
-
-      await queryRunner.manager.save(likeObject);
+      const like = await queryRunner.manager.save(likeObject);
       await queryRunner.manager.save(tweet);
       
-      await queryRunner.commitTransaction(); // could return update tweets likes to front
+      await queryRunner.commitTransaction(); 
+
+      return { ...tweet, likeId: like.id }
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(err?.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteLike(authUser: IJwtPayload, likeId: number, tweetId: number): Promise<{ success: boolean }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const tweet = await this.tweetRepository.findOneBy({ id: tweetId });
+      if (!tweet) throw new BadRequestException(messageTweetNotFound);
+      
+      const result = await this.likeRepository.delete({
+        id: likeId,
+        user: { 
+          id: authUser.id 
+        },
+        
+      });
+      
+      if (result.affected == 0) throw new BadRequestException('Can\'t unlike this tweet');
+      
+      tweet.likes_count = tweet.likes_count - 1;
+      await this.tweetRepository.save(tweet);
+  
+      return { success: true }
     } catch(err) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(err?.message);
