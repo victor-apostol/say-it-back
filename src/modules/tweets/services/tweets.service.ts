@@ -32,7 +32,7 @@ export class TweetsService {
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
     media_type = MediaTypes.IMAGE
-  ): Promise<Tweet> {
+  ): Promise<{ tweet: Tweet, successMessage: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     
@@ -62,7 +62,10 @@ export class TweetsService {
       
       await queryRunner.commitTransaction();
 
-      return tweet;
+      return {
+        tweet: tweet,
+        successMessage: "Your tweet was sent"
+      }
     } catch(err) {
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
@@ -200,7 +203,9 @@ export class TweetsService {
         ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 1000) + 's'
         : diffInMilliseconds < 3600000
           ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 60000) + 'm'
-          : tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 3600000) + 'h';
+          : diffInMilliseconds < 86400000
+            ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 3600000) + 'h'
+            : tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 86400000) + 'd';
       
       tweet['liked'] = false;
 

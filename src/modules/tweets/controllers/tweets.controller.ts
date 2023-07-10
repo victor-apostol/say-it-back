@@ -5,7 +5,6 @@ import {
   Param, 
   ParseFilePipe, 
   ParseIntPipe, 
-  Patch, 
   Post, 
   Query, 
   UploadedFiles, 
@@ -35,7 +34,7 @@ export class TweetsController {
   async getUserTweets(
     @Param('userId', ParseIntPipe) userId: number, 
     @Query() query: TweetPaginationDto
-  ): Promise<IPaginatedTweets> { console.log("FETCHIN USER TWEETS")
+  ): Promise<IPaginatedTweets> { 
     return await this.tweetsService.getUserTweets(userId, query.offset, query.count);
   }
 
@@ -43,7 +42,7 @@ export class TweetsController {
   async getTweet( 
     @Param('userId', ParseIntPipe) userId: number, 
     @Param('tweetId', ParseIntPipe) tweetId: number
-  ): Promise<ITweetResponse> { console.log("FETCHIN A TWEET")
+  ): Promise<ITweetResponse> { 
     return await this.tweetsService.getTweet(userId, tweetId);
   } 
   
@@ -52,7 +51,7 @@ export class TweetsController {
     @AuthUser() user: IJwtPayload,
     @Param('tweetId', ParseIntPipe) tweetId: number,
     @Query() query: TweetPaginationDto
-  ): Promise<{ tweets: Array<Tweet> }>  { console.log("FETCHIN REPLIES")
+  ): Promise<{ tweets: Array<Tweet> }>  { 
     return { tweets: await this.tweetsService.getTweetReplies(user.id, tweetId, query.offset, query.count) }
   }
 
@@ -69,7 +68,7 @@ export class TweetsController {
         ],
       })
     ) files: Array<Express.Multer.File>
-  ): Promise<Tweet> {
+  ): Promise<{ tweet: Tweet, successMessage: string }> {
     return await this.tweetsService.createTweet(authUser, body, files);
   }
 }
