@@ -30,16 +30,31 @@ import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 export class TweetsController {
   constructor(private readonly tweetsService: TweetsService) {}
 
-  @Get('user/:userId') // return if tweet is liked property
-  async getUserTweets(@Param('userId', ParseIntPipe) userId: number, @Query() query: TweetPaginationDto): Promise<IPaginatedTweets> {
+  @Get('user/:userId') 
+  async getUserTweets(
+    @Param('userId', ParseIntPipe) userId: number, 
+    @Query() query: TweetPaginationDto
+  ): Promise<IPaginatedTweets> { 
     return await this.tweetsService.getUserTweets(userId, query.offset, query.count);
   }
 
-  @Get('/user/:userId/:tweetId') // return if tweet is liked property
-  async getTweet(@Param('userId', ParseIntPipe) userId: number, @Param('tweetId', ParseIntPipe) tweetId: number): Promise<ITweetResponse> {
+  @Get('/user/:userId/:tweetId') 
+  async getTweet( 
+    @Param('userId', ParseIntPipe) userId: number, 
+    @Param('tweetId', ParseIntPipe) tweetId: number
+  ): Promise<ITweetResponse> { 
     return await this.tweetsService.getTweet(userId, tweetId);
   } 
   
+  @Get('/replies/:tweetId')
+  async getTweetReplies(
+    @AuthUser() user: IJwtPayload,
+    @Param('tweetId', ParseIntPipe) tweetId: number,
+    @Query() query: TweetPaginationDto
+  ): Promise<{ tweets: Array<Tweet> }>  { 
+    return { tweets: await this.tweetsService.getTweetReplies(user.id, tweetId, query.offset, query.count) }
+  }
+
   @Post('')
   @UseInterceptors(FilesInterceptor('files[]', maxFilesCount, { limits: { files: maxFilesCount } }))
   async createTweet(
@@ -53,7 +68,7 @@ export class TweetsController {
         ],
       })
     ) files: Array<Express.Multer.File>
-  ): Promise<Tweet> {
+  ): Promise<{ tweet: Tweet, successMessage: string }> {
     return await this.tweetsService.createTweet(authUser, body, files);
   }
 }

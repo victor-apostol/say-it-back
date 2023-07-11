@@ -1,10 +1,10 @@
-import { IsNumber, IsOptional, IsString } from "class-validator";
+import { IsNumberString, IsOptional, IsString } from "class-validator";
 
 export class CreateTweetDto {
   @IsString()
-  text_body: string; // files ???
+  text_body: string; 
 
   @IsOptional()
-  @IsNumber()
-  parent_id?: number;
+  @IsNumberString()
+  parent_id: string | null;
 }

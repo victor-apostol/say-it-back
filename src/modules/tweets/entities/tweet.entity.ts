@@ -30,5 +30,7 @@ export class Tweet {
   @ManyToOne(() => User, (user) => user.id)
   user: User;
 
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
   // views 
 }

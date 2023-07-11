@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { AfterRemove, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { User } from "@/modules/users/entities/user.entity";
 
@@ -12,5 +12,15 @@ export class Like {
 
   @ManyToOne(() => User, (user) => user.id) 
   user: User;
+
+  @AfterRemove()
+  async updateTweetLikesCount() {
+    if (this.tweet) {
+      console.log("AFTER REMOVE")
+      console.log(this.tweet)
+      // this.tweet.likes_count -= 1;
+      // await this.tweet.save();
+    }
+  }
 }
 

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, IsNull, Repository } from "typeorm";
 import { Tweet } from "../entities/tweet.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
 import { UsersService } from "@/modules/users/services/users.service";
@@ -8,8 +8,13 @@ import { StorageService } from "@/modules/media/services/storage.service";
 import { MediaTypes } from "@/modules/media/constants";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
-import { messageParentTweetDoesNotExist, messageTweetCouldNotBeCreated, messageTweetNotFound, messageUserNotFound } from "@/utils/global.constants";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
+import { 
+  messageParentTweetDoesNotExist, 
+  messageTweetCouldNotBeCreated, 
+  messageTweetNotFound, 
+  messageUserNotFound 
+} from "@/utils/global.constants";
 
 @Injectable()
 export class TweetsService {
@@ -27,7 +32,7 @@ export class TweetsService {
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
     media_type = MediaTypes.IMAGE
-  ): Promise<Tweet> {
+  ): Promise<{ tweet: Tweet, successMessage: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     
@@ -38,7 +43,7 @@ export class TweetsService {
       let parent_tweet: Tweet | null | undefined = undefined;
 
       if (body.parent_id) {
-        parent_tweet = await this.tweetsRepository.findOneBy({ id: body.parent_id });
+        parent_tweet = await this.tweetsRepository.findOneBy({ id: parseInt(body.parent_id) });
         if (!parent_tweet) throw new BadRequestException(messageParentTweetDoesNotExist);
 
         parent_tweet.replies_count += 1;
@@ -57,9 +62,11 @@ export class TweetsService {
       
       await queryRunner.commitTransaction();
 
-      return tweet;
+      return {
+        tweet: tweet,
+        successMessage: "Your tweet was sent"
+      }
     } catch(err) {
-      console.log(err)
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
     } finally {
@@ -73,9 +80,10 @@ export class TweetsService {
 
     const tweets = await this.tweetsRepository.find({
       where: {
-        user: { id: user.id },        
+        user: { id: user.id }, 
+        parent_tweet: IsNull()       
       },
-      relations: ['media', 'user'], 
+      relations: ['media', 'user', 'likes', 'likes.user'],
       select: { 
         user: {
           id: true,
@@ -83,24 +91,31 @@ export class TweetsService {
           last_name: true,
           email: true,
           avatar: true,
+        },
+        likes: {
+          id: true,
+          user: {
+            id: true,
+          }
         }
       },
       skip: offset,
       take: count + 1,
       order: {
-        id: 'ASC'
+        id: 'DESC'
       }
     });
-    console.log(tweets.slice(0, count))
+
     const hasMore = tweets.length > count;
-    
+    const modifiedTweets = this._setTweetMetadata(tweets, userId);
+
     return {
-      tweets: tweets.slice(0, count), 
+      tweets: modifiedTweets.slice(0, count), 
       hasMore
     }
   }
 
-  async getTweet(userId: number, tweetId: number): Promise<ITweetResponse> {
+  async getTweet(userId: number, tweetId: number, count = 5): Promise<ITweetResponse> {
     const user = await this.usersService.findUser(userId);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
@@ -108,7 +123,7 @@ export class TweetsService {
       where: { 
         id: tweetId 
       }, 
-      relations: ['media', 'user'], 
+      relations: ['media', 'user', 'likes', 'likes.user'],
       select: { 
         user: {
           id: true,
@@ -116,16 +131,42 @@ export class TweetsService {
           last_name: true,
           email: true,
           avatar: true,
+        },
+        likes: {
+          id: true,
+          user: {
+            id: true,
+          }
         }
       },
     });
+
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
 
-    const replies = await this.tweetsRepository.find({
+    for (let i = 0; i < tweet.likes.length; i++) {
+      if (tweet.likes[i].user.id === userId) {
+        tweet['liked'] = true;
+        tweet['likeId'] = tweet.likes[i].id;
+      }
+    }
+
+    const tweets = await this.getTweetReplies(userId, tweet.id, 0, count);
+
+    const hasMore = tweets.length > count;
+
+    return {
+      parentTweet: tweet,
+      tweets: tweets.slice(0, count),
+      hasMore
+    }
+  } 
+
+  async getTweetReplies(userId: number, tweetId: number, offset = 1, count = 5) {
+    const tweets = await this.tweetsRepository.find({
       where: {
-        parent_tweet: tweet
+        parent_tweet: { id: tweetId } 
       },
-      relations: ['media', 'user'], 
+      relations: ['media', 'user', 'likes', 'likes.user'],
       select: { 
         user: {
           id: true,
@@ -133,13 +174,49 @@ export class TweetsService {
           last_name: true,
           email: true,
           avatar: true,
+        },
+        likes: {
+          id: true,
+          user: {
+            id: true,
+          }
         }
       },
+      skip: offset,
+      take: count + 1,
+      order: {
+        id: 'DESC'
+      }
     });
 
-    return {
-      tweet: tweet,
-      replies: replies
-    }
-  } 
+    const modifiedTweets = this._setTweetMetadata(tweets, userId);
+    return modifiedTweets;
+  }
+
+  _setTweetMetadata(tweets: Array<Tweet>, userId: number) {
+    const timestamp = new Date().getTime();
+
+    return tweets.map(tweet => {
+      const diffInMilliseconds = timestamp - new Date(tweet.created_at).getTime();
+
+      diffInMilliseconds < 60000
+        ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 1000) + 's'
+        : diffInMilliseconds < 3600000
+          ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 60000) + 'm'
+          : diffInMilliseconds < 86400000
+            ? tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 3600000) + 'h'
+            : tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 86400000) + 'd';
+      
+      tweet['liked'] = false;
+
+      for (let i = 0; i < tweet.likes.length; i++) {
+        if (tweet.likes[i].user.id === userId) {
+          tweet['liked'] = true;
+          tweet['likeId'] = tweet.likes[i].id;
+        }
+      }
+      
+      return tweet;
+    });
+  }
 }
