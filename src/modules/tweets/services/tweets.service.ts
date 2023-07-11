@@ -74,6 +74,10 @@ export class TweetsService {
     }
   }
 
+  async getFeedTweets(user: IJwtPayload) {
+    
+  }
+
   async getUserTweets(userId: number, offset = 0, count = 5): Promise<IPaginatedTweets> {
     const user = await this.usersService.findUser(userId); 
     if (!user) throw new BadRequestException(messageUserNotFound);

@@ -19,4 +19,7 @@ export class Media {
 
   @ManyToOne(() => Tweet, (tweet) => tweet.id)
   tweet: Tweet;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
 }

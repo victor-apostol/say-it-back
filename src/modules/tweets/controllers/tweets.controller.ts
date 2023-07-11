@@ -30,6 +30,11 @@ import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 export class TweetsController {
   constructor(private readonly tweetsService: TweetsService) {}
 
+  @Get('/feed')
+  async getFeedTweets(@AuthUser() user: IJwtPayload) {
+    return this.tweetsService.getFeedTweets(user);
+  }
+
   @Get('user/:userId') 
   async getUserTweets(
     @Param('userId', ParseIntPipe) userId: number, 

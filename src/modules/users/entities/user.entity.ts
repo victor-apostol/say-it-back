@@ -1,6 +1,6 @@
 import { defaultUserAvatarPath } from "@/utils/global.constants";
 import { Exclude } from "class-transformer";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('users')
 export class User {
@@ -22,6 +22,16 @@ export class User {
   @Exclude()
   @Column({ type: 'varchar', length: 128})
   password: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
+
+  @ManyToMany(() => User, user => user.following)
+  @JoinTable({ name: 'following_list'})
+  follower: User[];
+
+  @ManyToMany(() => User, user => user.follower)
+  following: User[];
   
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);

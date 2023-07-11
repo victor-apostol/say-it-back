@@ -17,20 +17,22 @@ export class Tweet {
   @Column({ type: 'integer', default: 0 })
   replies_count: number;
 
+  @Column({ type: 'integer', default: 0})
+  views: number;
+  
+  @OneToMany(() => Like, (like) => like.tweet)
+  likes: Like[];
+  
+  @OneToMany(() => Media, (media) => media.tweet)
+  media: Media[];
+  
+  @ManyToOne(() => User, (user) => user.id)
+  user: User;
+  
   @ManyToOne(() => Tweet, (tweet) => tweet.id)
   @JoinColumn()
   parent_tweet: Tweet;
 
-  @OneToMany(() => Like, (like) => like.tweet)
-  likes: Like[];
-
-  @OneToMany(() => Media, (media) => media.tweet)
-  media: Media[];
-
-  @ManyToOne(() => User, (user) => user.id)
-  user: User;
-
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
-  // views 
 }

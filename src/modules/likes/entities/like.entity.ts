@@ -13,14 +13,7 @@ export class Like {
   @ManyToOne(() => User, (user) => user.id) 
   user: User;
 
-  @AfterRemove()
-  async updateTweetLikesCount() {
-    if (this.tweet) {
-      console.log("AFTER REMOVE")
-      console.log(this.tweet)
-      // this.tweet.likes_count -= 1;
-      // await this.tweet.save();
-    }
-  }
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
 }
 
