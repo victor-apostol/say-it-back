@@ -9,6 +9,7 @@ import { MediaTypes } from "@/modules/media/constants";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
+import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageParentTweetDoesNotExist, 
   messageTweetCouldNotBeCreated, 
@@ -74,11 +75,35 @@ export class TweetsService {
     }
   }
 
-  async getFeedTweets(user: IJwtPayload) {
+  async getFeedTweets(authUser: IJwtPayload, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
+    const user = await this.usersService.findUser(authUser.id); 
+    if (!user) throw new BadRequestException(messageUserNotFound);
+
+    let counter = 1;
+    let hasMore = true;
+    const feedTweets: Array<Tweet> = []; //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
     
+    const followingList = await this.usersService.getFollowingList(authUser, offset, take); 
+    if (followingList.length <= take) hasMore = false; 
+   
+    const allTweets = followingList.flatMap((user) => user.tweets);
+
+    while (counter <= followingList.length && counter <= take) {
+      const randomIndex = Math.floor(Math.random() * allTweets.length);
+      const randomTweet = allTweets[randomIndex];
+
+      if (!feedTweets.includes(randomTweet)) feedTweets.push(randomTweet);
+
+      counter ++;
+    }
+    console.log(feedTweets)
+    return {
+      tweets: feedTweets,
+      hasMore
+    }
   }
 
-  async getUserTweets(userId: number, offset = 0, count = 5): Promise<IPaginatedTweets> {
+  async getUserTweets(userId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
     const user = await this.usersService.findUser(userId); 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
@@ -88,38 +113,26 @@ export class TweetsService {
         parent_tweet: IsNull()       
       },
       relations: ['media', 'user', 'likes', 'likes.user'],
-      select: { 
-        user: {
-          id: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-          avatar: true,
-        },
-        likes: {
-          id: true,
-          user: {
-            id: true,
-          }
-        }
-      },
+      ...tweetPropertiesSelect,
       skip: offset,
-      take: count + 1,
+      take: take + 1,
       order: {
-        id: 'DESC'
+        created_at: 'DESC'
       }
     });
 
-    const hasMore = tweets.length > count;
-    const modifiedTweets = this._setTweetMetadata(tweets, userId);
+    const hasMore = tweets.length > take;
+    
+    tweets.splice(-1);
+    const modifiedTweets = this._setTweetsMetadata(tweets, userId);
 
     return {
-      tweets: modifiedTweets.slice(0, count), 
+      tweets: modifiedTweets, 
       hasMore
     }
   }
 
-  async getTweet(userId: number, tweetId: number, count = 5): Promise<ITweetResponse> {
+  async getTweet(userId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
     const user = await this.usersService.findUser(userId);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
@@ -128,21 +141,7 @@ export class TweetsService {
         id: tweetId 
       }, 
       relations: ['media', 'user', 'likes', 'likes.user'],
-      select: { 
-        user: {
-          id: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-          avatar: true,
-        },
-        likes: {
-          id: true,
-          user: {
-            id: true,
-          }
-        }
-      },
+      ...tweetPropertiesSelect,
     });
 
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
@@ -154,50 +153,37 @@ export class TweetsService {
       }
     }
 
-    const tweets = await this.getTweetReplies(userId, tweet.id, 0, count);
-
-    const hasMore = tweets.length > count;
+    const tweets = await this.getTweetReplies(userId, tweet.id, 0, take);
+    const hasMore = tweets.length > take;
 
     return {
       parentTweet: tweet,
-      tweets: tweets.slice(0, count),
+      tweets,
       hasMore
     }
   } 
 
-  async getTweetReplies(userId: number, tweetId: number, offset = 1, count = 5) {
+  async getTweetReplies(userId: number, tweetId: number, offset = 1, take = TWEET_PAGINATION_TAKE) {
     const tweets = await this.tweetsRepository.find({
       where: {
         parent_tweet: { id: tweetId } 
       },
       relations: ['media', 'user', 'likes', 'likes.user'],
-      select: { 
-        user: {
-          id: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-          avatar: true,
-        },
-        likes: {
-          id: true,
-          user: {
-            id: true,
-          }
-        }
-      },
+      ...tweetPropertiesSelect,
       skip: offset,
-      take: count + 1,
+      take: take + 1,
       order: {
-        id: 'DESC'
+        created_at: 'DESC'
       }
     });
 
-    const modifiedTweets = this._setTweetMetadata(tweets, userId);
+    tweets.splice(-1);
+    const modifiedTweets = this._setTweetsMetadata(tweets, userId);
+
     return modifiedTweets;
   }
 
-  _setTweetMetadata(tweets: Array<Tweet>, userId: number) {
+  _setTweetsMetadata(tweets: Array<Tweet>, userId: number) {
     const timestamp = new Date().getTime();
 
     return tweets.map(tweet => {

@@ -38,10 +38,18 @@ export class AuthService {
   }
 
   async login(body: LoginDto): Promise<string> {
-    const user = await this.userRepository.findOneBy({ email: body.email });
+    const user = await this.userRepository.findOne({ 
+      where: { 
+        email: body.email 
+      },
+      select: {
+        password: true,
+        id: true,
+        email: true
+      }
+    });
 
     if (!user) throw new BadRequestException("Incorrent email or password");
-
     const doesPasswordMatch = await bcrypt.compare(body.password, user.password);
 
     if (!doesPasswordMatch) throw new BadRequestException("Incorrent email or password");
@@ -56,14 +64,8 @@ export class AuthService {
     const user = await this.userRepository.findOne({ 
       where: { id }
     }); 
-    
-    if (user) {
-      const { password, ...restuser } = user; 
 
-      return restuser;
-    }
-
-    return null;
+    return user;
   }
 
   _generateToken(payload: IJwtPayload): string {

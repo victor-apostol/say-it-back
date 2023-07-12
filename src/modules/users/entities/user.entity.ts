@@ -1,6 +1,6 @@
+import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { defaultUserAvatarPath } from "@/utils/global.constants";
-import { Exclude } from "class-transformer";
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('users')
 export class User {
@@ -19,20 +19,26 @@ export class User {
   @Column({ type: 'varchar', length: 128, default: defaultUserAvatarPath})
   avatar: string; 
   
-  @Exclude()
-  @Column({ type: 'varchar', length: 128})
+  @Column({ type: 'varchar', length: 128, select: false})
   password: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
+  @OneToMany(() => Tweet, tweet => tweet.user)
+  tweets: Array<Tweet> 
+  
+  @ManyToMany(() => User, user => user.follower)
+  @JoinTable({
+    name: 'following_list',
+    joinColumns: [{ name: 'follower_id' }],
+    inverseJoinColumns: [{ name: 'following_id' }]
+  })
+  following: User[];
+
   @ManyToMany(() => User, user => user.following)
-  @JoinTable({ name: 'following_list'})
   follower: User[];
 
-  @ManyToMany(() => User, user => user.follower)
-  following: User[];
-  
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);
   }

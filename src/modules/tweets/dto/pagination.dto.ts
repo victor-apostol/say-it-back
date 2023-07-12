@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsNumber, IsNumberString, IsOptional } from "class-validator";
+import { IsNumber, IsOptional } from "class-validator";
 
 export class TweetPaginationDto {
   @IsOptional()
@@ -10,5 +10,5 @@ export class TweetPaginationDto {
   @IsOptional()
   @IsNumber()
   @Transform(({ value }) => parseInt(value))
-  count?: number;
+  take?: number;
 }

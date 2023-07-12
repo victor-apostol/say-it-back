@@ -15,7 +15,8 @@ const dataSourceOptions: DataSourceOptions = {
   entities: entitiesToLoad,
   migrations: ['dist/migrations/*.js'],
   migrationsTableName: "migrations",
-  logging: true
+  logging: true,
+  maxQueryExecutionTime: 10000,
 }
 
 const dataSource = new DataSource(dataSourceOptions);

@@ -31,8 +31,12 @@ export class TweetsController {
   constructor(private readonly tweetsService: TweetsService) {}
 
   @Get('/feed')
-  async getFeedTweets(@AuthUser() user: IJwtPayload) {
-    return this.tweetsService.getFeedTweets(user);
+  async getFeedTweets(
+    @AuthUser() user: IJwtPayload, 
+    @Query() query: TweetPaginationDto
+  ): Promise<IPaginatedTweets> {
+    console.log('get feed', query)
+    return await this.tweetsService.getFeedTweets(user, query.offset, query.take);
   }
 
   @Get('user/:userId') 
@@ -40,7 +44,7 @@ export class TweetsController {
     @Param('userId', ParseIntPipe) userId: number, 
     @Query() query: TweetPaginationDto
   ): Promise<IPaginatedTweets> { 
-    return await this.tweetsService.getUserTweets(userId, query.offset, query.count);
+    return await this.tweetsService.getUserTweets(userId, query.offset, query.take);
   }
 
   @Get('/user/:userId/:tweetId') 
@@ -57,7 +61,7 @@ export class TweetsController {
     @Param('tweetId', ParseIntPipe) tweetId: number,
     @Query() query: TweetPaginationDto
   ): Promise<{ tweets: Array<Tweet> }>  { 
-    return { tweets: await this.tweetsService.getTweetReplies(user.id, tweetId, query.offset, query.count) }
+    return { tweets: await this.tweetsService.getTweetReplies(user.id, tweetId, query.offset, query.take) }
   }
 
   @Post('')
