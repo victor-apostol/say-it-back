@@ -49,7 +49,8 @@ export class TweetsService {
 
         parent_tweet.replies_count += 1;
         await queryRunner.manager.save(parent_tweet);
-      } 
+      } 1111
+      
 
       const tweet = this.tweetsRepository.create({
         ...body,
