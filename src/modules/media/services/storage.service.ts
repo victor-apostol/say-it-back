@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { DataSource, QueryRunner } from "typeorm";
 import { MediaService } from "./media.service";
 import { MediaTypes, messageServicesSideError } from "../constants";
+import { Media } from "../entities/media.entitiy";
 
 @Injectable()
 export class StorageService {
@@ -23,14 +24,15 @@ export class StorageService {
 
   private readonly S3Bucket = this.configService.get<string>("AWS_S3_BUCKET");
 
-  async uploadFileToS3Bucket(
+  async uploadFilesToS3Bucket(
     files: Array<Express.Multer.File>, 
     userId: number, 
     tweetId: number, 
     mediaType: MediaTypes,
     queryRunner: QueryRunner
-  ): Promise<void> {
+  ): Promise<Array<Media>> {
     try {
+      const mediaPlaceholder = [] as Array<Media>;
       const dateFormat = new Date().toLocaleString('en-US', {
         year: 'numeric',
         month: '2-digit',
@@ -45,7 +47,8 @@ export class StorageService {
           const parsedFilename = `${dateFormat}_${file.originalname}`.replace(/\s/g, "");
           const fileLocation = `https://${this.S3Bucket}.s3.amazonaws.com/${parsedFilename}`;
           
-          await this.mediaService.saveFilePath(fileLocation, userId, tweetId, mediaType, queryRunner);
+          const mediaEntity = await this.mediaService.saveFilePath(fileLocation, userId, tweetId, mediaType, queryRunner);
+          mediaPlaceholder.push(mediaEntity);
           
           const S3Response = await this.S3client.send(
             new PutObjectCommand({
@@ -58,6 +61,8 @@ export class StorageService {
           if (S3Response.$metadata.httpStatusCode !== 200) throw new Error();
         })
       );
+
+      return mediaPlaceholder;
     } catch(err) {
       throw new InternalServerErrorException(messageServicesSideError);
     }

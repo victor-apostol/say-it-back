@@ -18,7 +18,7 @@ export class MediaService {
     tweetId: number, 
     mediaType: MediaTypes, 
     queryRunner: QueryRunner
-  ): Promise<void> {
+  ): Promise<Media> {
     const user = await queryRunner.manager.findOneBy(User, { id: userId });
     if (!user) throw new BadRequestException(messageUserNotFound);
 
@@ -33,5 +33,7 @@ export class MediaService {
     });
 
     await queryRunner.manager.save(mediaInstance);
+
+    return mediaInstance;
   }
 }

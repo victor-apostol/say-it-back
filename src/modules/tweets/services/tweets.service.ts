@@ -49,23 +49,23 @@ export class TweetsService {
 
         parent_tweet.replies_count += 1;
         await queryRunner.manager.save(parent_tweet);
-      } 1111
+      } 
       
-
       const tweet = this.tweetsRepository.create({
         ...body,
         user,
-        media: [],
         parent_tweet
       });
       await queryRunner.manager.save(tweet);
       
-      if (files?.length > 0) await this.storageService.uploadFileToS3Bucket(files, authUser.id, tweet.id, media_type, queryRunner); 
-      
+      const media = files?.length > 0
+        ? await this.storageService.uploadFilesToS3Bucket(files, authUser.id, tweet.id, media_type, queryRunner)
+        : [];
+
       await queryRunner.commitTransaction();
 
       return {
-        tweet: tweet,
+        tweet: { ...tweet, media },
         successMessage: "Your tweet was sent"
       }
     } catch(err) {
