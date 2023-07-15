@@ -2,12 +2,12 @@ import { BadRequestException, Injectable, InternalServerErrorException } from "@
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, IsNull, Repository } from "typeorm";
 import { Tweet } from "../entities/tweet.entity";
+import { User } from "@/modules/users/entities/user.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
 import { UsersService } from "@/modules/users/services/users.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { MediaTypes } from "@/modules/media/constants";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
-import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
@@ -29,7 +29,7 @@ export class TweetsService {
   ) {}
 
   async createTweet(
-    authUser: IJwtPayload, 
+    authUser: User, 
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
     media_type = MediaTypes.IMAGE
@@ -38,9 +38,6 @@ export class TweetsService {
     await queryRunner.startTransaction();
     
     try {
-      const user = await this.usersService.findUser(authUser.id);
-      if (!user) throw new BadRequestException(messageUserNotFound);
-
       let parent_tweet: Tweet | null | undefined = undefined;
 
       if (body.parent_id) {
@@ -53,13 +50,13 @@ export class TweetsService {
       
       const tweet = this.tweetsRepository.create({
         ...body,
-        user,
+        user: authUser,
         parent_tweet
       });
       await queryRunner.manager.save(tweet);
       
       const media = files?.length > 0
-        ? await this.storageService.uploadFilesToS3Bucket(files, authUser.id, tweet.id, media_type, queryRunner)
+        ? await this.storageService.uploadFilesToS3Bucket(files, authUser, tweet.id, media_type, queryRunner)
         : [];
 
       await queryRunner.commitTransaction();
@@ -76,36 +73,24 @@ export class TweetsService {
     }
   }
 
-  async getFeedTweets(authUser: IJwtPayload, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    const user = await this.usersService.findUser(authUser.id); 
-    if (!user) throw new BadRequestException(messageUserNotFound);
-
-    let counter = 1;
+  async getFeedTweets(authUser: User, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
     let hasMore = true;
-    const feedTweets: Array<Tweet> = []; //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
-    
-    const followingList = await this.usersService.getFollowingList(authUser, offset, take); 
-    if (followingList.length <= take) hasMore = false; 
+    //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
+    const followingListTweets = await this.usersService.getFollowingUsersTweets(authUser, offset, take);  
+    console.log(followingListTweets)
+    if (followingListTweets.length <= take) hasMore = false; 
    
-    const allTweets = followingList.flatMap((user) => user.tweets);
+    const allTweets = followingListTweets.flatMap((user) => user.tweets);
+    const addTweetsMetadata = this._setTweetsMetadata(allTweets, authUser.id);
 
-    while (counter <= followingList.length && counter <= take) {
-      const randomIndex = Math.floor(Math.random() * allTweets.length);
-      const randomTweet = allTweets[randomIndex];
-
-      if (!feedTweets.includes(randomTweet)) feedTweets.push(randomTweet);
-
-      counter ++;
-    }
-    console.log(feedTweets)
     return {
-      tweets: feedTweets,
+      tweets: addTweetsMetadata,
       hasMore
     }
   }
 
-  async getUserTweets(userId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    const user = await this.usersService.findUser(userId); 
+  async getUserTweets(authUser: User, userId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
+    const user = await this.usersService.findUser(userId, authUser); 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
     const tweets = await this.tweetsRepository.find({
@@ -123,8 +108,8 @@ export class TweetsService {
     });
 
     const hasMore = tweets.length > take;
-    
-    tweets.splice(-1);
+    if (hasMore) tweets.splice(-1); 
+
     const modifiedTweets = this._setTweetsMetadata(tweets, userId);
 
     return {
@@ -133,8 +118,8 @@ export class TweetsService {
     }
   }
 
-  async getTweet(userId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
-    const user = await this.usersService.findUser(userId);
+  async getTweet(authUser: User, userId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
+    const user = await this.usersService.findUser(userId, authUser);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
     const tweet = await this.tweetsRepository.findOne({ 
@@ -178,10 +163,10 @@ export class TweetsService {
       }
     });
 
-    tweets.splice(-1);
-    const modifiedTweets = this._setTweetsMetadata(tweets, userId);
+    const hasMore = tweets.length > take;
+    if (hasMore) tweets.splice(-1); 
 
-    return modifiedTweets;
+    return this._setTweetsMetadata(tweets, userId);
   }
 
   _setTweetsMetadata(tweets: Array<Tweet>, userId: number) {

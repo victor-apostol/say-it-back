@@ -24,6 +24,7 @@ import { FilesInterceptor } from "@nestjs/platform-express";
 import { fileMaxSizeInKb, maxFilesCount } from "@/modules/media/constants";
 import { MediaValidator } from "@/modules/media/validators/media.validator";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
+import { User } from "@/modules/users/entities/user.entity";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
@@ -32,7 +33,7 @@ export class TweetsController {
 
   @Get('/feed')
   async getFeedTweets(
-    @AuthUser() user: IJwtPayload, 
+    @AuthUser() user: User, 
     @Query() query: TweetPaginationDto
   ): Promise<IPaginatedTweets> {
     console.log('get feed', query)
@@ -41,18 +42,20 @@ export class TweetsController {
 
   @Get('user/:userId') 
   async getUserTweets(
+    @AuthUser() authUser: User,
     @Param('userId', ParseIntPipe) userId: number, 
     @Query() query: TweetPaginationDto
   ): Promise<IPaginatedTweets> { 
-    return await this.tweetsService.getUserTweets(userId, query.offset, query.take);
+    return await this.tweetsService.getUserTweets(authUser, userId, query.offset, query.take);
   }
 
   @Get('/user/:userId/:tweetId') 
   async getTweet( 
+    @AuthUser() authUser: User,
     @Param('userId', ParseIntPipe) userId: number, 
     @Param('tweetId', ParseIntPipe) tweetId: number
   ): Promise<ITweetResponse> { 
-    return await this.tweetsService.getTweet(userId, tweetId);
+    return await this.tweetsService.getTweet(authUser, userId, tweetId);
   } 
   
   @Get('/replies/:tweetId')
@@ -67,7 +70,7 @@ export class TweetsController {
   @Post('')
   @UseInterceptors(FilesInterceptor('files[]', maxFilesCount, { limits: { files: maxFilesCount } }))
   async createTweet(
-    @AuthUser() authUser: IJwtPayload, 
+    @AuthUser() authUser: User, 
     @Body() body: CreateTweetDto,
     @UploadedFiles(
       new ParseFilePipe({

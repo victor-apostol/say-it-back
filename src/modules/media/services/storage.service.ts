@@ -5,6 +5,7 @@ import { DataSource, QueryRunner } from "typeorm";
 import { MediaService } from "./media.service";
 import { MediaTypes, messageServicesSideError } from "../constants";
 import { Media } from "../entities/media.entitiy";
+import { User } from "@/modules/users/entities/user.entity";
 
 @Injectable()
 export class StorageService {
@@ -26,7 +27,7 @@ export class StorageService {
 
   async uploadFilesToS3Bucket(
     files: Array<Express.Multer.File>, 
-    userId: number, 
+    authUser: User, 
     tweetId: number, 
     mediaType: MediaTypes,
     queryRunner: QueryRunner
@@ -47,7 +48,7 @@ export class StorageService {
           const parsedFilename = `${dateFormat}_${file.originalname}`.replace(/\s/g, "");
           const fileLocation = `https://${this.S3Bucket}.s3.amazonaws.com/${parsedFilename}`;
           
-          const mediaEntity = await this.mediaService.saveFilePath(fileLocation, userId, tweetId, mediaType, queryRunner);
+          const mediaEntity = await this.mediaService.saveFilePath(fileLocation, authUser, tweetId, mediaType, queryRunner);
           mediaPlaceholder.push(mediaEntity);
           
           const S3Response = await this.S3client.send(

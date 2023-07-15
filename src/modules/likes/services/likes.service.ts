@@ -29,15 +29,12 @@ export class LikesService {
     await queryRunner.startTransaction();
 
     try {
-      const user = await this.userRepository.findOneBy({ id: authUser.id });
-      if (!user) throw new BadRequestException(messageUserNotFound);
-
       const tweet = await this.tweetRepository.findOneBy({ id: body.tweetId }); 
       if (!tweet) throw new BadRequestException(messageTweetNotFound);
   
       const isTweetLiked = await this.likeRepository.findOne({ 
         where: {  
-          user,
+          user: authUser,
           tweet: { id: tweet.id}          
         }
       });
@@ -45,7 +42,7 @@ export class LikesService {
       if (isTweetLiked) throw new BadRequestException(messageTweetIsAlreadyLiked);
   
       const likeObject = this.likeRepository.create({
-        user,
+        user: authUser,
         tweet
       });
     
