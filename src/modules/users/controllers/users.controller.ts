@@ -12,28 +12,12 @@ import { IGetFriendShipFollowers, IGetFriendShipFollowing, IGetFriendShipsCount 
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('/friendships/count/:targetUserId')
-  async getFriendshipsCount(@Param('targetUserId', ParseIntPipe) targetUserId: number): Promise<IGetFriendShipsCount> {
-    return this.usersService.getFriendshipsCount(targetUserId);
-  }
-
-  // @Get('/friendships/following')
-  // async getFriendshipsFollowing(@AuthUser() user: User): Promise<IGetFriendShipFollowing> {
-  //   return this.usersService.getFriendshipsFollowing(user);
-  // }
-
-  // @Get('/friendships/followers')
-  // async getFriendshipsFollowers(@AuthUser() user: User): Promise<IGetFriendShipFollowers> {
-  //   return this.usersService.getFriendshipsFollowers(user);
-  // }
-
   @Get(":id")
-  async userProfileInfo(@AuthUser() authUser: User, @Param('id', ParseIntPipe) id: number): Promise<User> {
-    const user = await this.usersService.findUser(id, authUser);
-
-    if (!user) throw new BadRequestException('user not found');
-    
-    return user; 
+  async userProfileInfo(
+    @AuthUser() user: User,
+    @Param('id', ParseIntPipe) id: number
+  ): Promise<{user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
+    return await this.usersService.getUserProfileInfo(id, user); 
   }
 
   @Post('/friendship/:action')

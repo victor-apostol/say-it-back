@@ -1,7 +1,6 @@
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { defaultUserAvatarPath } from "@/utils/global.constants";
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { Friendship } from "./friendship.entity";
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('users')
 export class User {
@@ -29,11 +28,22 @@ export class User {
   @OneToMany(() => Tweet, tweet => tweet.user)
   tweets: Array<Tweet> 
 
-  // @OneToMany(() => User, user => user.following)
-  // follower: User[];
+  @ManyToMany(() => User, user => user.following)
+  @JoinTable({
+    name: "friendships",
+    joinColumn: {
+      name: "followed_id",
+      referencedColumnName: "id"
+    },
+    inverseJoinColumn: {
+      name: "following_id",
+      referencedColumnName: "id"
+    }
+  })
+  followed: Array<User>;
 
-  // @ManyToOne(() => User, user => user.follower)
-  // following: User;
+  @ManyToMany(() => User, user => user.followed)
+  following: Array<User>;
 
   constructor(partial: Partial<User>) {
     Object.assign(this, partial);

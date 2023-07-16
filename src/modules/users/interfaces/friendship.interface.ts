@@ -1,4 +1,4 @@
-import { Friendship } from "../entities/friendship.entity";
+import { User } from "../entities/user.entity";
 
 export interface IGetFriendShipsCount {
   followingsCount: number;
@@ -6,11 +6,11 @@ export interface IGetFriendShipsCount {
 }
 
 export interface IGetFriendShipFollowers {
-  followers: Array<Friendship>
+  followers: Array<User>
 }
 
 export interface IGetFriendShipFollowing {
-  following: Array<Friendship>
+  following: Array<User>
 }
 
 export enum FriendshipActions {

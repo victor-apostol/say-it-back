@@ -4,122 +4,82 @@ import { User } from "../entities/user.entity";
 import { Repository } from "typeorm";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
-import { Friendship } from "../entities/friendship.entity";
-import { IGetFriendShipsCount } from "../interfaces/friendship.interface";
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+  @InjectRepository(User)
+  private readonly userRepository: Repository<User>
 
-    @InjectRepository(Friendship)
-    private readonly friendshipRepository: Repository<Friendship>
-  ) {}
-
-  async findUser(id: number, authUser: User): Promise<User | null> {
-    console.log(await this.userRepository
-      .createQueryBuilder('user')
-  .innerJoin('Friendship', 'friendship', 'friendship.follower = user.id')
-  .leftJoinAndSelect('friendship.follower', 'lol')
-  .getMany()
-    )
-
+  async findUser(id: number): Promise<User | null> {
     return await this.userRepository.findOneBy({ id });
-
-  }
-  
-  userFollowersQuery = this.friendshipRepository
-    .createQueryBuilder('friendship')
-    .leftJoinAndSelect('friendship.follower', 'follower')
-
-  userFollowingsQuery = this.friendshipRepository
-    .createQueryBuilder('friendship')
-    .leftJoinAndSelect('friendship.following', 'following')
-
-  async getFollowingUsersTweets(authUser: User, offset: number, take: number) {
-    const users = await this.userRepository
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.tweets', 'tweet')
-      .leftJoinAndSelect('tweet.media', 'media')
-      .leftJoinAndSelect('tweet.user', 'tweet_user')
-      .leftJoinAndSelect('tweet.likes', 'like')
-      .leftJoinAndSelect('like.user', 'like_user')
-      .innerJoin('Friendship', 'friendship', 'friendship.follower = :userId', { userId: authUser.id })
-      .leftJoinAndSelect('friendship.following', 'friendship_users')
-      .where((qb) => {
-        const subQuery = qb
-          .subQuery()
-          .select('tweet.id')
-          .from('Tweet', 'tweet')
-          .where('tweet.userId = friendship_users.id')
-          .andWhere('tweet.parent_tweet IS NULL')
-          .orderBy('tweet.created_at', 'DESC')
-          .offset(offset)
-          .limit(take)
-          .getQuery();
-        console.log(`tweet.id IN ${subQuery}`)
-        return `tweet.id IN ${subQuery}`;
-      })
-      .select(['user', 'tweet', 'like', 'like_user', 'tweet_user', 'media'])
-      .orderBy('RANDOM()')
-      .getMany();
-  
-    return users;
   }
 
   async friendshipAction(authUser: User, targetUserId: number, action: string) {
     if (authUser.id === targetUserId) throw new BadRequestException("You can't follow you're self");
 
-    const targetUser = await this.userRepository.findOneBy({ id: targetUserId });
-    if (!targetUser) throw new BadRequestException(messageUserNotFound);
-    
-    const findFriendship = await this.friendshipRepository.findOne({
+    const targetUser = await this.userRepository.findOne({ 
       where: {
-        following: { id: targetUserId },
-        follower: { id: authUser.id }
-      }
+        id: targetUserId 
+      }, 
+      relations: ['followed']
     });
+    if (!targetUser) throw new BadRequestException(messageUserNotFound);  
+
+    const friendship = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('friendships', 'friendship', 'user.id = friendship.followed_id') 
+      .where('friendship.following_id = :userId AND friendship.followed_id = :targetUserId', { userId: authUser.id, targetUserId: targetUserId})
+      .getOne()
 
     if (action == FriendshipActions.CREATE) {
-      if (findFriendship) throw new BadRequestException("You are already following this user");
+      if (friendship) throw new BadRequestException("You are already following this user");
 
-      const newFriendship = this.friendshipRepository.create({
-        follower: { id: authUser.id },
-        following: { id: targetUserId }
+      const userWithRelations = await this.userRepository.findOne({ 
+        where: { 
+          id: authUser.id
+        }, 
+        relations: ['following']
       });
 
-      await this.friendshipRepository.save(newFriendship);
-    } else if(action == FriendshipActions.DESTROY) {
-      if (!findFriendship) throw new BadRequestException("You are not yet following this user");
+      if (!userWithRelations) throw new BadRequestException(messageUserNotFound);
+      
+      userWithRelations.following.push(targetUser);
+      targetUser.followed.push(userWithRelations);
 
-      const result = await this.friendshipRepository.delete({
-        following: { id: targetUserId },
-        follower: { id: authUser.id }
+      await this.userRepository.save(userWithRelations);
+    } else if (action == FriendshipActions.DESTROY) {
+      if (!friendship) throw new BadRequestException("You are not yet following this user");
+
+      targetUser.followed = targetUser.followed.filter(user => {
+        return user.id !== authUser.id
       });
 
-      if (result.affected === 0) throw new BadRequestException("Unable to unfollow user, invalid user"); 
+      await this.userRepository.save(targetUser);
     }
   }
 
-  async getFriendshipsCount(targetUserId: number): Promise<IGetFriendShipsCount> {
-    const followersCount = await this.userFollowersQuery
-      .where('friendship.followingId = :userId', { userId: targetUserId })
-      .getCount()
+  async getUserProfileInfo(targetUserId: number, authUser: User): Promise<{user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
+    const user = await this.userRepository
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.followed", "followed")
+      .leftJoinAndSelect("user.following", "following")
+      .where("user.id = :userId", { userId: targetUserId })
+      .select(["user","following.id","followed.id"])
+      .getOne();
 
-    const followingsCount = await this.userFollowingsQuery
-      .where('friendship.followerId = :userId', { userId: targetUserId })
-      .getCount()
- 
-    return { followingsCount, followersCount }
-  }
+    if (!user) throw new BadRequestException(messageUserNotFound);
 
-  // async getFriendshipsFollowing(authUser: User): Promise<IGetFriendShipFollowing> {
-
-  // }
-
-  // async getFriendshipsFollowers(authUser: User): Promise<IGetFriendShipFollowers> {
+    const returnObject = {
+      user,
+      followingsCount: user.following.length, 
+      followersCount: user.followed.length,
+    };
     
-  // }
+    const amIfollowing = user.followed.some(follower => follower.id === authUser.id);
+
+    return targetUserId !== authUser.id 
+      ? {...returnObject, amIfollowing: amIfollowing} 
+      : returnObject; 
+  }
 }
 

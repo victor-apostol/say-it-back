@@ -74,14 +74,27 @@ export class TweetsService {
   }
 
   async getFeedTweets(authUser: User, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    let hasMore = true;
-    //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
-    const followingListTweets = await this.usersService.getFollowingUsersTweets(authUser, offset, take);  
-    console.log(followingListTweets)
-    if (followingListTweets.length <= take) hasMore = false; 
+    let hasMore = true;  //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
+
+    const followingListTweets = await this.tweetsRepository
+      .createQueryBuilder("tweet")
+      .leftJoinAndSelect('tweet.likes', 'likes')
+      .leftJoin('likes.user', 'user_likes')
+      .leftJoinAndSelect('tweet.media', 'media')
+      .innerJoinAndSelect("tweet.user", "user")
+      .innerJoin("user.followed", "followed")
+      .where("followed.id = :id", { id: authUser.id })
+      .andWhere("tweet.parent_tweet IS NULL")
+      .addSelect(['user_likes.id'])
+      .skip(offset)
+      .take(take + 1)
+      // .orderBy('RANDOM()')
+      .orderBy('tweet.created_at', 'DESC')
+      .getMany()
+
+    if (followingListTweets.length <= take) hasMore = false; console.log(followingListTweets)
    
-    const allTweets = followingListTweets.flatMap((user) => user.tweets);
-    const addTweetsMetadata = this._setTweetsMetadata(allTweets, authUser.id);
+    const addTweetsMetadata = this._setTweetsMetadata(followingListTweets, authUser.id);
 
     return {
       tweets: addTweetsMetadata,
@@ -89,8 +102,8 @@ export class TweetsService {
     }
   }
 
-  async getUserTweets(authUser: User, userId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    const user = await this.usersService.findUser(userId, authUser); 
+  async getUserTweets(targetUserId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
+    const user = await this.usersService.findUser(targetUserId); 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
     const tweets = await this.tweetsRepository.find({
@@ -110,7 +123,7 @@ export class TweetsService {
     const hasMore = tweets.length > take;
     if (hasMore) tweets.splice(-1); 
 
-    const modifiedTweets = this._setTweetsMetadata(tweets, userId);
+    const modifiedTweets = this._setTweetsMetadata(tweets, targetUserId);
 
     return {
       tweets: modifiedTweets, 
@@ -118,8 +131,8 @@ export class TweetsService {
     }
   }
 
-  async getTweet(authUser: User, userId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
-    const user = await this.usersService.findUser(userId, authUser);
+  async getTweet(targetUserId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
+    const user = await this.usersService.findUser(targetUserId);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
     const tweet = await this.tweetsRepository.findOne({ 
@@ -133,13 +146,13 @@ export class TweetsService {
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
 
     for (let i = 0; i < tweet.likes.length; i++) {
-      if (tweet.likes[i].user.id === userId) {
+      if (tweet.likes[i].user.id === targetUserId) {
         tweet['liked'] = true;
         tweet['likeId'] = tweet.likes[i].id;
       }
     }
 
-    const tweets = await this.getTweetReplies(userId, tweet.id, 0, take);
+    const tweets = await this.getTweetReplies(targetUserId, tweet.id, 0, take);
     const hasMore = tweets.length > take;
 
     return {

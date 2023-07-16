@@ -36,26 +36,23 @@ export class TweetsController {
     @AuthUser() user: User, 
     @Query() query: TweetPaginationDto
   ): Promise<IPaginatedTweets> {
-    console.log('get feed', query)
     return await this.tweetsService.getFeedTweets(user, query.offset, query.take);
   }
 
   @Get('user/:userId') 
   async getUserTweets(
-    @AuthUser() authUser: User,
     @Param('userId', ParseIntPipe) userId: number, 
     @Query() query: TweetPaginationDto
   ): Promise<IPaginatedTweets> { 
-    return await this.tweetsService.getUserTweets(authUser, userId, query.offset, query.take);
+    return await this.tweetsService.getUserTweets(userId, query.offset, query.take);
   }
 
   @Get('/user/:userId/:tweetId') 
   async getTweet( 
-    @AuthUser() authUser: User,
     @Param('userId', ParseIntPipe) userId: number, 
     @Param('tweetId', ParseIntPipe) tweetId: number
   ): Promise<ITweetResponse> { 
-    return await this.tweetsService.getTweet(authUser, userId, tweetId);
+    return await this.tweetsService.getTweet(userId, tweetId);
   } 
   
   @Get('/replies/:tweetId')
