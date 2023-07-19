@@ -6,6 +6,7 @@ import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { AuthUser } from "@/utils/decorators/authUser.decorator";
 import { ConfigService } from "@nestjs/config";
 import { JwtGuard } from "@/modules/auth/guards/auth.guard";
+import { oAuthDto } from "./dto/oauth.dto";
 
 @Controller('auth')
 export class AuthController {
@@ -25,5 +26,10 @@ export class AuthController {
   @Post('login')
   async login(@Body() body: LoginDto): Promise<{ token: string }> {
     return { token: await this.authService.login(body) };
+  }
+
+  @Post('/oauth')
+  async oauth(@Body() body: oAuthDto): Promise<{ token: string }> {
+    return { token: await this.authService.oauth(body) };
   }
 }

@@ -19,8 +19,11 @@ export class User {
   @Column({ type: 'varchar', length: 128, default: defaultUserAvatarPath})
   avatar: string; 
   
-  @Column({ type: 'varchar', length: 128, select: false})
+  @Column({ type: 'varchar', length: 128, select: false })
   password: string;
+
+  @Column({ type: 'boolean', default: false })
+  is_oauth: boolean;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;

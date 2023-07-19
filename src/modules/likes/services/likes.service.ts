@@ -35,7 +35,7 @@ export class LikesService {
       const isTweetLiked = await this.likeRepository.findOne({ 
         where: {  
           user: authUser,
-          tweet: { id: tweet.id}          
+          tweet: { id: tweet.id }          
         }
       });
   

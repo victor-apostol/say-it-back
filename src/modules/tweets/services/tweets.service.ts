@@ -33,7 +33,7 @@ export class TweetsService {
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
     media_type = MediaTypes.IMAGE
-  ): Promise<{ tweet: Tweet, successMessage: string }> {
+  ): Promise<{ tweet: Tweet, successMessage: string, requestId: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     
@@ -63,7 +63,8 @@ export class TweetsService {
 
       return {
         tweet: { ...tweet, media },
-        successMessage: "Your tweet was sent"
+        successMessage: "Your tweet was sent",
+        requestId: Math.random().toString(36).slice(-8)
       }
     } catch(err) {
       await queryRunner.rollbackTransaction()
@@ -74,7 +75,7 @@ export class TweetsService {
   }
 
   async getFeedTweets(authUser: User, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    let hasMore = true;  //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
+     //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
 
     const followingListTweets = await this.tweetsRepository
       .createQueryBuilder("tweet")
@@ -92,13 +93,15 @@ export class TweetsService {
       .orderBy('tweet.created_at', 'DESC')
       .getMany()
 
-    if (followingListTweets.length <= take) hasMore = false; console.log(followingListTweets)
+    const hasMore = followingListTweets.length > take;
+    if (hasMore) followingListTweets.splice(-1); 
    
     const addTweetsMetadata = this._setTweetsMetadata(followingListTweets, authUser.id);
 
     return {
       tweets: addTweetsMetadata,
-      hasMore
+      requestId: Math.random().toString(36).slice(-8),
+      hasMore,
     }
   }
 
@@ -127,6 +130,7 @@ export class TweetsService {
 
     return {
       tweets: modifiedTweets, 
+      requestId: Math.random().toString(36).slice(-8),
       hasMore
     }
   }
@@ -157,6 +161,7 @@ export class TweetsService {
 
     return {
       parentTweet: tweet,
+      requestId: Math.random().toString(36).slice(-8),
       tweets,
       hasMore
     }
@@ -204,7 +209,7 @@ export class TweetsService {
           tweet['likeId'] = tweet.likes[i].id;
         }
       }
-      
+
       return tweet;
     });
   }

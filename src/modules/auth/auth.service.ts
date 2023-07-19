@@ -9,6 +9,8 @@ import { User } from "../users/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dto/login.dto";
 import { IJwtPayload } from "./interfaces/jwt.interface";
+import { messageUserNotFound } from "@/utils/global.constants";
+import { oAuthDto } from "./dto/oauth.dto";
 
 @Injectable()
 export class AuthService {
@@ -18,8 +20,7 @@ export class AuthService {
   constructor(private readonly configService: ConfigService, private readonly jwtService: JwtService) {}
 
   async register(body: RegisterDto): Promise<string> { 
-    const user = await this.userRepository.findOneBy({ email: body.email });
-
+    const user = await this.userRepository.findOneBy({ email: body.email, is_oauth: false });
     if (user) throw new BadRequestException(messageAccountAlreadyExists);
 
     const passwordHash = await bcrypt.hash(body.password, Number(this.configService.get<string>('SALT')));
@@ -40,7 +41,8 @@ export class AuthService {
   async login(body: LoginDto): Promise<string> {
     const user = await this.userRepository.findOne({ 
       where: { 
-        email: body.email 
+        email: body.email,
+        is_oauth: false 
       },
       select: {
         password: true,
@@ -50,13 +52,35 @@ export class AuthService {
     });
 
     if (!user) throw new BadRequestException("Incorrent email or password");
-    const doesPasswordMatch = await bcrypt.compare(body.password, user.password);
 
+    const doesPasswordMatch = await bcrypt.compare(body.password, user.password);
     if (!doesPasswordMatch) throw new BadRequestException("Incorrent email or password");
 
     return this._generateToken({ 
       id: user.id,
       email: user.email 
+    });
+  }
+
+  async oauth(body: oAuthDto): Promise<string> {
+    let user = await this.userRepository.findOneBy({ email: body.email, is_oauth: true });
+    
+    if (!user) {
+      user = this.userRepository.create({
+        first_name: body.first_name,
+        last_name: body.last_name,
+        email: body.email,
+        avatar: body.avatar,
+        is_oauth: true,
+        password: 'oauth'
+      });
+
+      await this.userRepository.save(user);
+    }
+ 
+    return this._generateToken({
+      id: user.id,
+      email: user.email
     });
   }
 
