@@ -7,6 +7,7 @@ import { jwtOptions } from "./../../config/options";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../users/entities/user.entity";
 import { UsersModule } from "../users/users.module";
+import { SseStrategy } from "./strategies/see.strategy";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from "../users/users.module";
   providers: [
     AuthService, 
     JwtStrategy, 
+    SseStrategy
   ],
   controllers: [AuthController],
 })

@@ -6,11 +6,12 @@ import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 import { Media } from "src/modules/media/entities/media.entitiy";
+import { Notification } from "@/modules/notifications/notification.entity";
 //import { LikeEventSubscriber } from "@/modules/likes/entities/like.event.subscriber";
 import * as Joi from 'joi';
 
 export const entitiesToLoad = [
-  User, Tweet, Media, Like
+  User, Tweet, Media, Like, Notification
 ]
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {

@@ -7,6 +7,7 @@ import { TweetsModule } from '@/modules/tweets/tweets.module';
 import { MediaModule } from '@/modules/media/media.module';
 import { LikesModule } from '@/modules/likes/likes.module';
 import { configValidationSchema, typeormOptions } from '@/config/options';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { configValidationSchema, typeormOptions } from '@/config/options';
     TweetsModule,
     MediaModule,
     LikesModule,
+    NotificationsModule
   ],
 })
 export class AppModule {}

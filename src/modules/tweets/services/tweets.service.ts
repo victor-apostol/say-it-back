@@ -1,14 +1,18 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, IsNull, Repository } from "typeorm";
-import { Tweet } from "../entities/tweet.entity";
+import { Subject } from "rxjs";
+import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
-import { CreateTweetDto } from "../dto/createTweet.dto";
+import { Tweet } from "../entities/tweet.entity";
 import { UsersService } from "@/modules/users/services/users.service";
 import { StorageService } from "@/modules/media/services/storage.service";
-import { MediaTypes } from "@/modules/media/constants";
+import { CreateTweetDto } from "../dto/createTweet.dto";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
+import { NotificationTypes } from "@/modules/notifications/notification.types";
+import { TweetLikeEvent } from "@/modules/notifications/notification_events.types";
+import { MediaTypes } from "@/modules/media/constants";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageParentTweetDoesNotExist, 
@@ -22,11 +26,17 @@ export class TweetsService {
   @InjectRepository(Tweet)
   private readonly tweetsRepository: Repository<Tweet>;
 
+  @InjectRepository(Notification)
+  private readonly notificationsRepository: Repository<Notification>;
+
   constructor(
     private readonly usersService: UsersService, 
     private readonly storageService: StorageService,
     private readonly dataSource: DataSource,   
   ) {}
+
+  private readonly tweetLikesSubject$ = new Subject<any>();
+  private readonly tweetRepliesSubject$ = new Subject<TweetLikeEvent>();
 
   async createTweet(
     authUser: User, 
@@ -41,7 +51,11 @@ export class TweetsService {
       let parent_tweet: Tweet | null | undefined = undefined;
 
       if (body.parent_id) {
-        parent_tweet = await this.tweetsRepository.findOneBy({ id: parseInt(body.parent_id) });
+        parent_tweet = await this.tweetsRepository.findOne({ 
+          where: {
+            id: parseInt(body.parent_id) 
+          },
+        });
         if (!parent_tweet) throw new BadRequestException(messageParentTweetDoesNotExist);
 
         parent_tweet.replies_count += 1;
@@ -59,7 +73,16 @@ export class TweetsService {
         ? await this.storageService.uploadFilesToS3Bucket(files, authUser, tweet.id, media_type, queryRunner)
         : [];
 
+      const newNotification = this.notificationsRepository.create({
+        type: NotificationTypes.REPLY,
+        text: body.text_body,
+        user: authUser
+      });
+      await queryRunner.manager.save(newNotification);
+
       await queryRunner.commitTransaction();
+
+      if (body.parent_id) this.tweetLikesSubject$.next({ event: NotificationTypes.REPLY, eventTargetUserId: authUser.id });// should be author of the parent tweet
 
       return {
         tweet: { ...tweet, media },
@@ -67,6 +90,7 @@ export class TweetsService {
         requestId: Math.random().toString(36).slice(-8)
       }
     } catch(err) {
+      console.log(err)
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
     } finally {
@@ -212,5 +236,13 @@ export class TweetsService {
 
       return tweet;
     });
+  }
+
+  tweetsLikesObservable() {
+    return this.tweetLikesSubject$.asObservable();
+  }
+
+  tweetsRepliesObservable() {
+    return this.tweetRepliesSubject$.asObservable();
   }
 }

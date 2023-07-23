@@ -13,7 +13,7 @@ export class Notification {
   @Column({ type: 'enum', enum: NotificationTypes })
   type: NotificationTypes;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', default: () => 'CURRENT_TIMESTAMP' })
   created_at: string;
 
   @ManyToOne(() => User)

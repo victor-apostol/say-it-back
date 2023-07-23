@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { User } from "../entities/user.entity";
+import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/notification.types";
+import { Subject } from "rxjs";
 import { Repository } from "typeorm";
+import { User } from "../entities/user.entity";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
 
@@ -14,6 +17,8 @@ export class UsersService {
     return await this.userRepository.findOneBy({ id });
   }
 
+  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>();
+ 
   async friendshipAction(authUser: User, targetUserId: number, action: string) {
     if (authUser.id === targetUserId) throw new BadRequestException("You can't follow you're self");
 
@@ -28,8 +33,10 @@ export class UsersService {
     const friendship = await this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('friendships', 'friendship', 'user.id = friendship.followed_id') 
-      .where('friendship.following_id = :userId AND friendship.followed_id = :targetUserId', { userId: authUser.id, targetUserId: targetUserId})
-      .getOne()
+      .where('friendship.following_id = :userId AND friendship.followed_id = :targetUserId', { 
+        userId: authUser.id, targetUserId: targetUserId
+      })
+      .getOne();
 
     if (action == FriendshipActions.CREATE) {
       if (friendship) throw new BadRequestException("You are already following this user");
@@ -47,6 +54,10 @@ export class UsersService {
       targetUser.followed.push(userWithRelations);
 
       await this.userRepository.save(userWithRelations);
+
+      this.friendshipAction$.next({ event: NotificationTypes.FOLLOW, authUserId: authUser.id, eventTargetUserId: targetUser.id });
+      // cache somewhere the event data. check it if it isnt then send event otherwise skip sending the event,and only send in the notifications case if this data wansnt alr sent in a period of time for ex 2hrs to prevent spam
+      // add this to notifs table then commit transaction then send the send event
     } else if (action == FriendshipActions.DESTROY) {
       if (!friendship) throw new BadRequestException("You are not yet following this user");
 
@@ -58,7 +69,10 @@ export class UsersService {
     }
   }
 
-  async getUserProfileInfo(targetUserId: number, authUser: User): Promise<{user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
+  async getUserProfileInfo(
+    targetUserId: number, 
+    authUser: User
+  ): Promise<{user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
     const user = await this.userRepository
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.followed", "followed")
@@ -80,6 +94,10 @@ export class UsersService {
     return targetUserId !== authUser.id 
       ? {...returnObject, amIfollowing: amIfollowing} 
       : returnObject; 
+  }
+  
+  getFriendshipActionsObservable() {
+    return this.friendshipAction$.asObservable();
   }
 }
 

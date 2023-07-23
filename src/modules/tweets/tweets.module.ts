@@ -10,15 +10,16 @@ import { TweetsController } from "@/modules/tweets/controllers/tweets.controller
 import { TweetsService } from "@/modules/tweets/services/tweets.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { MediaService } from "@/modules/media/services/media.service";
+import { Notification } from "../notifications/notification.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tweet, Like, Media, User]),
+    TypeOrmModule.forFeature([Tweet, Like, Media, User, Notification]),
     UsersModule,
     MediaModule
   ],
   controllers: [TweetsController],
   providers: [TweetsService, StorageService, MediaService],
-  exports: []
+  exports: [TweetsService]
 })
 export class TweetsModule {}
