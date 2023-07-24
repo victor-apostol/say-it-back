@@ -21,7 +21,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TweetsModule,
     MediaModule,
     LikesModule,
-    NotificationsModule
+    NotificationsModule,
   ],
 })
 export class AppModule {}

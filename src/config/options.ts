@@ -1,4 +1,4 @@
-import { ConfigService } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModuleAsyncOptions } from "@nestjs/jwt";
 import { TypeOrmModuleAsyncOptions } from "@nestjs/typeorm";
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
@@ -9,6 +9,7 @@ import { Media } from "src/modules/media/entities/media.entitiy";
 import { Notification } from "@/modules/notifications/notification.entity";
 //import { LikeEventSubscriber } from "@/modules/likes/entities/like.event.subscriber";
 import * as Joi from 'joi';
+import { RedisAsyncModuleOptions } from "@/modules/redis/redis.types";
 
 export const entitiesToLoad = [
   User, Tweet, Media, Like, Notification
@@ -24,6 +25,25 @@ export const typeormOptions: TypeOrmModuleAsyncOptions = {
     database: cfg.get("DB_NAME"),
     entities: entitiesToLoad,
     //subscribers: [LikeEventSubscriber],
+  }),
+  inject: [ConfigService]
+}
+
+export const redisOptions: RedisAsyncModuleOptions = {
+  useFactory: async (configService: ConfigService) => ({
+    connectionOptions: {
+      host: configService.get<string>('REDIS_HOST'),
+      port: configService.get<number>('REDIS_PORT'),
+    },
+    onClientReady: (client) => {
+      client.on('error', (err) => {
+        console.log('Redis Client Error: ', err);
+      });
+
+      client.on('connect', () => {
+        console.log(`Connected to redis on ${client.options.host}:${client.options.port}`);
+      });
+    },
   }),
   inject: [ConfigService]
 }
@@ -54,7 +74,10 @@ export const configValidationSchema = Joi.object({
   AWS_S3_BUCKET: Joi.string().required(),
   AWS_ACCESS_KEY: Joi.string().required(),
   AWS_SECRET_ACCESS_KEY: Joi.string().required(),
-  AWS_RETRY_TIMES: Joi.number().required()
+  AWS_RETRY_TIMES: Joi.number().required(),
+
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().required()
 });
 
 export const validationPipeOptions = {

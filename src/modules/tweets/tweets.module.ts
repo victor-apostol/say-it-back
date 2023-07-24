@@ -11,10 +11,13 @@ import { TweetsService } from "@/modules/tweets/services/tweets.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { MediaService } from "@/modules/media/services/media.service";
 import { Notification } from "../notifications/notification.entity";
+import { RedisModule } from "../redis/redis.module";
+import { redisOptions } from "@/config/options";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Tweet, Like, Media, User, Notification]),
+    RedisModule.registerAsync(redisOptions),
     UsersModule,
     MediaModule
   ],

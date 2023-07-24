@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
 import { NotificationTypes } from "@/modules/notifications/notification.types";
@@ -7,11 +7,16 @@ import { Repository } from "typeorm";
 import { User } from "../entities/user.entity";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
+import { IORedisKey } from "@/modules/redis/redis.types";
+import Redis from "ioredis";
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleDestroy {
   @InjectRepository(User)
-  private readonly userRepository: Repository<User>
+  private readonly userRepository: Repository<User>;
+
+  @Inject(IORedisKey)
+  private readonly redisClient: Redis;
 
   async findUser(id: number): Promise<User | null> {
     return await this.userRepository.findOneBy({ id });
@@ -55,8 +60,21 @@ export class UsersService {
 
       await this.userRepository.save(userWithRelations);
 
-      this.friendshipAction$.next({ event: NotificationTypes.FOLLOW, authUserId: authUser.id, eventTargetUserId: targetUser.id });
-      // cache somewhere the event data. check it if it isnt then send event otherwise skip sending the event,and only send in the notifications case if this data wansnt alr sent in a period of time for ex 2hrs to prevent spam
+      const eventPayload = { 
+        event: NotificationTypes.FOLLOW, 
+        authUserId: authUser.id, 
+        eventTargetUserId: targetUser.id 
+      }
+
+      const stringifiedPayload = JSON.stringify(eventPayload);
+
+      const isCached = await this.redisClient.get(stringifiedPayload);
+      if (!isCached) {
+        // write event to DB
+        this.friendshipAction$.next(eventPayload);
+
+        await this.redisClient.set(stringifiedPayload, '1');
+      }
       // add this to notifs table then commit transaction then send the send event
     } else if (action == FriendshipActions.DESTROY) {
       if (!friendship) throw new BadRequestException("You are not yet following this user");
@@ -98,6 +116,10 @@ export class UsersService {
   
   getFriendshipActionsObservable() {
     return this.friendshipAction$.asObservable();
+  }
+
+  onModuleDestroy() {
+    this.friendshipAction$.complete();
   }
 }
 
