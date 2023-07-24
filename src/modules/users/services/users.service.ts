@@ -121,5 +121,33 @@ export class UsersService implements OnModuleDestroy {
   onModuleDestroy() {
     this.friendshipAction$.complete();
   }
+
+  async followsRecomandation(user: User): Promise<Array<User>> {
+    const authUser = await this.userRepository
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.following", "following")
+      .where("user.id = :userId", { userId: user.id })
+      .select(["user.id","following.id"])
+      .getOne();
+
+    if (!authUser) throw new BadRequestException(messageUserNotFound);
+
+    const followingsOfFollowings = await this.userRepository
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.following", "following")
+      .leftJoinAndSelect("following.following", "followingsOfFollowings")
+      .where("user.id = :userId", { userId: user.id })
+      .andWhere('followingsOfFollowings.id NOT IN (:...followedIds)', { followedIds: authUser.following.map((followingUser) => followingUser.id) })
+      // .orderBy('RANDOM()')
+      .getOne()
+
+      const flattenedUsers = followingsOfFollowings 
+      ? followingsOfFollowings.following.flatMap((followedUser) =>
+          followedUser.following.filter((user) => !followingsOfFollowings.following.map((followedUser) => followedUser.id).includes(user.id))
+        )
+      : [];// fetch top people on twitter
+
+    return flattenedUsers;
+  }
 }
 

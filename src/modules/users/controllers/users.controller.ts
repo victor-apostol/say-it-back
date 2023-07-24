@@ -12,7 +12,12 @@ import { IGetFriendShipFollowers, IGetFriendShipFollowing, IGetFriendShipsCount 
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get(":id")
+  @Get("/follows-recomandation")
+  async followsRecomandation(@AuthUser() user: User): Promise<Array<User>> {
+    return await this.usersService.followsRecomandation(user);
+  }
+
+  @Get("/:id")
   async userProfileInfo(
     @AuthUser() user: User,
     @Param('id', ParseIntPipe) id: number
