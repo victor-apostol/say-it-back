@@ -205,7 +205,7 @@ export class TweetsService implements OnModuleDestroy{
     const hasMore = tweets.length > take;
 
     return {
-      parentTweet: tweet,
+      parentTweet: this._setTweetsMetadata([tweet], targetUserId)[0],
       requestId: Math.random().toString(36).slice(-8),
       tweets,
       hasMore

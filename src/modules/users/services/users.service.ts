@@ -147,6 +147,8 @@ export class UsersService implements OnModuleDestroy {
         )
       : [];// fetch top people on twitter
 
+      // populate with wheter i am folowing or nah the user
+
     return flattenedUsers;
   }
 }
