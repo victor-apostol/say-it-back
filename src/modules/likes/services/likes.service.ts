@@ -1,17 +1,17 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { InjectRepository } from "@nestjs/typeorm";
+import { Subject } from "rxjs";
 import { DataSource, Repository } from "typeorm";
-import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
-import { CreateLikeDto } from "@/modules/likes/dto/create.dto";
+import { Notification } from "@/modules/notifications/notification.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
-import { messageTweetNotFound, messageUserNotFound } from "@/utils/global.constants";
-import { messageTweetIsAlreadyLiked } from "../constants";
+import { CreateLikeDto } from "@/modules/likes/dto/create.dto";
+import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { IORedisKey } from "@/modules/redis/redis.types";
-import Redis from "ioredis";
-import { Subject } from "rxjs";
 import { TweetLikeEvent } from "@/modules/notifications/notification_events.types";
+import { messageTweetIsAlreadyLiked } from "../constants";
+import { messageTweetNotFound } from "@/utils/global.constants";
 
 @Injectable()
 export class LikesService {
@@ -21,13 +21,16 @@ export class LikesService {
   @InjectRepository(Like)
   private readonly likeRepository: Repository<Like>;
 
-  @Inject(IORedisKey)
-  private readonly redisClient: Redis;
+  @InjectRepository(Notification)
+  private readonly notificationsRepository: Repository<Notification>;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource, 
+    private readonly eventEmitter: EventEmitter2
+  ) {}
+    
+  private readonly likesSubject$ = new Subject<TweetLikeEvent>()
   
-  private readonly likesSubject$ = new Subject<TweetLikeEvent>();
-
   async createLike(authUser: IJwtPayload, body: CreateLikeDto): Promise<any | BadRequestException> { 
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -62,32 +65,32 @@ export class LikesService {
         tweet
       });
     
-      tweet.likes_count = tweet.likes_count + 1; // likign replies doesnt send eventshaha neither the original tweet
+      tweet.likes_count = tweet.likes_count + 1; 
 
       const like = await queryRunner.manager.save(likeObject);
       await queryRunner.manager.save(tweet);
-      console.log("COMMITING", tweet.user.id)
+
       await queryRunner.commitTransaction(); 
 
       const eventPayload = { 
         event: NotificationTypes.LIKE, 
-        likeId: like.id,
+        tweetId: tweet.id,
         authUserId: authUser.id, 
         eventTargetUserId: tweet.user.id 
       }
 
-      const stringifiedPayload = JSON.stringify(eventPayload);
+      const newNotification = this.notificationsRepository.create({
+        type: NotificationTypes.LIKE,
+        user: { id: authUser.id }
+      });
 
-      const isCached = await this.redisClient.get(stringifiedPayload);
-      console.log(isCached)
-      if (!isCached) {
-        console.log("SENDING EVENT")
-        // write event to DB
-        this.likesSubject$.next(eventPayload);
-
-        await this.redisClient.set(stringifiedPayload, '1');
-      }
-
+      this.eventEmitter.emit('new.notification', { 
+        eventPayload, 
+        subject$: this.likesSubject$, 
+        repository: this.notificationsRepository,
+        entity: newNotification
+      });
+    
       return { ...tweet, likeId: like.id }
     } catch(err) {
       console.log("ERROR", err)

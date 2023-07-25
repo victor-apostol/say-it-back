@@ -8,6 +8,7 @@ import { MediaModule } from '@/modules/media/media.module';
 import { LikesModule } from '@/modules/likes/likes.module';
 import { configValidationSchema, typeormOptions } from '@/config/options';
 import { NotificationsModule } from './notifications/notifications.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     MediaModule,
     LikesModule,
     NotificationsModule,
+    EventEmitterModule.forRoot()
   ],
 })
 export class AppModule {}

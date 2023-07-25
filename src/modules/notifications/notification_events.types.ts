@@ -9,7 +9,7 @@ export type FollowNotificationEvent = {
 export type TweetLikeEvent = {
   event: NotificationTypes, 
   authUserId: number;
-  likeId: number;
+  tweetId: number;
   eventTargetUserId: number;
 }
 

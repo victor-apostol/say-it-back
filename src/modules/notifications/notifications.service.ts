@@ -7,17 +7,17 @@ import { LikesService } from "../likes/services/likes.service";
 
 @Injectable()
 export class NotificationsService implements OnModuleDestroy{
-  private sseSubject$: Subject<string> = new Subject<string>();
-
   constructor(
     private readonly usersSevice: UsersService, 
     private readonly tweetsService: TweetsService,
-    private readonly likesService: LikesService
+    private readonly likesService: LikesService,
   ) {
     this.handleFriendshipFollowEvent();
     this.handleTweetLikesEvents();
     this.handleTweetRepliesEvents();
   }
+
+  private sseSubject$: Subject<string> = new Subject<string>()
 
   private handleFriendshipFollowEvent() {
     this.usersSevice.getFriendshipActionsObservable().subscribe((eventData) => {      

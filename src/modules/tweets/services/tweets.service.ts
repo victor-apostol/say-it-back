@@ -1,20 +1,16 @@
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, OnModuleDestroy } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, IsNull, Repository } from "typeorm";
-import Redis from "ioredis";
 import { Subject } from "rxjs";
-import { IORedisKey } from "@/modules/redis/redis.types";
 import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { UsersService } from "@/modules/users/services/users.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { TweetLikeEvent, TweetReplySubject } from "@/modules/notifications/notification_events.types";
+import { TweetReplySubject } from "@/modules/notifications/notification_events.types";
 import { MediaTypes } from "@/modules/media/constants";
 import { Tweet } from "../entities/tweet.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
-import { ITweetResponse } from "../interfaces/TweetResponse.interface";
-import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageParentTweetDoesNotExist, 
@@ -22,6 +18,9 @@ import {
   messageTweetNotFound, 
   messageUserNotFound 
 } from "@/utils/global.constants";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
+import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 
 @Injectable()
 export class TweetsService implements OnModuleDestroy{
@@ -31,23 +30,21 @@ export class TweetsService implements OnModuleDestroy{
   @InjectRepository(Notification)
   private readonly notificationsRepository: Repository<Notification>;
 
-  @Inject(IORedisKey)
-  private readonly redisClient: Redis;
-
   constructor(
-    private readonly usersService: UsersService, 
+    private readonly usersService: UsersService,
     private readonly storageService: StorageService,
     private readonly dataSource: DataSource,   
+    private readonly eventEmitter: EventEmitter2
   ) {}
-
-  private readonly tweetRepliesSubject$ = new Subject<TweetReplySubject>();
+  
+  private readonly tweetRepliesSubject$ = new Subject<TweetReplySubject>()
 
   async createTweet(
     authUser: User, 
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
     media_type = MediaTypes.IMAGE
-  ): Promise<{ tweet: Tweet, successMessage: string, requestId: string }> {
+  ): Promise<{ tweet: Tweet, successMessage: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     
@@ -81,36 +78,30 @@ export class TweetsService implements OnModuleDestroy{
 
       await queryRunner.commitTransaction();
 
-      if (body.parent_id && parent_tweet) { // could be problem cause the tweet failes i wont return, but i should return then do this, [must emit event]
+      if (body.parent_id && parent_tweet) {
         const eventPayload = { 
           event: NotificationTypes.REPLY, 
           authUserId: authUser.id,
           eventTargetUserId: parent_tweet.user.id 
         } // should include prob the tweeet message too or something // cant spam with replies so may not need caching
-  
-        const stringifiedPayload = JSON.stringify(eventPayload);
+        
+        const newNotification = this.notificationsRepository.create({
+          type: NotificationTypes.REPLY,
+          text: body.text_body,
+          user: { id: parent_tweet.user.id }   // should be to the target user ??? or should have a to and from in db ???
+        });
 
-        const isCached = await this.redisClient.get(stringifiedPayload);
-
-        if (!isCached) {
-          const newNotification = this.notificationsRepository.create({
-            type: NotificationTypes.REPLY,
-            text: body.text_body,
-            user: { id: parent_tweet.user.id }   // should be to the target user ??? or should have a to and from in db ???
-          }); // didnt include in the transaction the notification, since idk if it fails to write doesnt make sense to not write the actual tweet
-          
-          await this.notificationsRepository.save(newNotification);
-
-          this.tweetRepliesSubject$.next(eventPayload);
-
-          await this.redisClient.set(stringifiedPayload, '1');
-        }
+        this.eventEmitter.emit('new.notification', { 
+          eventPayload, 
+          subject$: this.tweetRepliesSubject$, 
+          repository: this.notificationsRepository, 
+          entity: newNotification 
+        });
       }
 
       return {
         tweet: { ...tweet, media },
         successMessage: "Your tweet was sent",
-        requestId: Math.random().toString(36).slice(-8)
       }
     } catch(err) {
       await queryRunner.rollbackTransaction()
@@ -145,7 +136,6 @@ export class TweetsService implements OnModuleDestroy{
 
     return {
       tweets: addTweetsMetadata,
-      requestId: Math.random().toString(36).slice(-8),
       hasMore,
     }
   }
@@ -175,7 +165,6 @@ export class TweetsService implements OnModuleDestroy{
 
     return {
       tweets: modifiedTweets, 
-      requestId: Math.random().toString(36).slice(-8),
       hasMore
     }
   }
@@ -206,7 +195,6 @@ export class TweetsService implements OnModuleDestroy{
 
     return {
       parentTweet: this._setTweetsMetadata([tweet], targetUserId)[0],
-      requestId: Math.random().toString(36).slice(-8),
       tweets,
       hasMore
     }

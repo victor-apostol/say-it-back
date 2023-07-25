@@ -1,28 +1,32 @@
 import { BadRequestException, Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
-import { NotificationTypes } from "@/modules/notifications/notification.types";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Subject } from "rxjs";
 import { Repository } from "typeorm";
 import { User } from "../entities/user.entity";
+import { NotificationTypes } from "@/modules/notifications/notification.types";
+import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
-import { IORedisKey } from "@/modules/redis/redis.types";
-import Redis from "ioredis";
+import { Notification } from "@/modules/notifications/notification.entity";
 
 @Injectable()
 export class UsersService implements OnModuleDestroy {
   @InjectRepository(User)
   private readonly userRepository: Repository<User>;
 
-  @Inject(IORedisKey)
-  private readonly redisClient: Redis;
+  @InjectRepository(Notification)
+  private readonly notificationRepository: Repository<Notification>;
+  
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>()
 
   async findUser(id: number): Promise<User | null> {
     return await this.userRepository.findOneBy({ id });
   }
-
-  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>();
  
   async friendshipAction(authUser: User, targetUserId: number, action: string) {
     if (authUser.id === targetUserId) throw new BadRequestException("You can't follow you're self");
@@ -66,16 +70,17 @@ export class UsersService implements OnModuleDestroy {
         eventTargetUserId: targetUser.id 
       }
 
-      const stringifiedPayload = JSON.stringify(eventPayload);
+      const newNotification = this.notificationRepository.create({
+        type: NotificationTypes.FOLLOW,
+        user: { id: authUser.id }
+      })
 
-      const isCached = await this.redisClient.get(stringifiedPayload);
-      if (!isCached) {
-        // write event to DB
-        this.friendshipAction$.next(eventPayload);
-
-        await this.redisClient.set(stringifiedPayload, '1');
-      }
-      // add this to notifs table then commit transaction then send the send event
+      this.eventEmitter.emit('new.notification', { 
+        eventPayload, 
+        subject$: this.friendshipAction$,
+        repository: this.notificationRepository,
+        entity: newNotification
+      });
     } else if (action == FriendshipActions.DESTROY) {
       if (!friendship) throw new BadRequestException("You are not yet following this user");
 

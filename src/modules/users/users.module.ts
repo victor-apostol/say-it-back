@@ -4,13 +4,11 @@ import { UsersService } from "./services/users.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { Tweet } from "../tweets/entities/tweet.entity";
-import { redisOptions } from "@/config/options";
-import { RedisModule } from "../redis/redis.module";
+import { Notification } from "../notifications/notification.entity";
 
 @Module({
   imports: [
-    RedisModule.registerAsync(redisOptions),
-    TypeOrmModule.forFeature([User, Tweet])
+    TypeOrmModule.forFeature([User, Tweet, Notification])
   ],
   controllers: [UsersController],
   providers: [UsersService],
