@@ -1,6 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "../users/entities/user.entity";
-import { NotificationTypes } from "./notification.types";
+import { NotificationTypes } from "./types/notification.types";
+import { Tweet } from "../tweets/entities/tweet.entity";
 
 @Entity('notifications')
 export class Notification {
@@ -16,6 +17,12 @@ export class Notification {
   @Column({ type: 'date', default: () => 'CURRENT_TIMESTAMP' })
   created_at: string;
 
+  @ManyToOne(() => Tweet)
+  tweet: Tweet;
+
   @ManyToOne(() => User)
-  user: User;
+  action_user: User;
+
+  @ManyToOne(() => User)
+  target_user: User;
 }

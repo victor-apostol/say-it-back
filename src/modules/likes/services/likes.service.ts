@@ -8,8 +8,8 @@ import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { CreateLikeDto } from "@/modules/likes/dto/create.dto";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
-import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { TweetLikeEvent } from "@/modules/notifications/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { TweetLikeEvent } from "@/modules/notifications/types/notification_events.types";
 import { messageTweetIsAlreadyLiked } from "../constants";
 import { messageTweetNotFound } from "@/utils/global.constants";
 
@@ -81,7 +81,9 @@ export class LikesService {
 
       const newNotification = this.notificationsRepository.create({
         type: NotificationTypes.LIKE,
-        user: { id: authUser.id }
+        action_user: { id: authUser.id },
+        target_user: { id: tweet.user.id },
+        tweet: { id: tweet.id }
       });
 
       this.eventEmitter.emit('new.notification', { 

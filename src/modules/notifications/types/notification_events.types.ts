@@ -1,4 +1,4 @@
-import { NotificationTypes } from "./notification.types";
+import { NotificationTypes } from "./notification.types"
 
 export type FollowNotificationEvent = {
   event: NotificationTypes;

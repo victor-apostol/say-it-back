@@ -25,6 +25,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   is_oauth: boolean;
 
+  @Column({ type: 'integer', default: 0 })
+  notifications_count: number;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 

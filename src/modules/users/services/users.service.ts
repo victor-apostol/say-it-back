@@ -4,8 +4,8 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Subject } from "rxjs";
 import { Repository } from "typeorm";
 import { User } from "../entities/user.entity";
-import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
 import { Notification } from "@/modules/notifications/notification.entity";
@@ -72,7 +72,8 @@ export class UsersService implements OnModuleDestroy {
 
       const newNotification = this.notificationRepository.create({
         type: NotificationTypes.FOLLOW,
-        user: { id: authUser.id }
+        action_user: { id: authUser.id },
+        target_user: { id: targetUser.id }
       })
 
       this.eventEmitter.emit('new.notification', { 

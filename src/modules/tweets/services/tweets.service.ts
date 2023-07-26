@@ -6,8 +6,8 @@ import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { UsersService } from "@/modules/users/services/users.service";
 import { StorageService } from "@/modules/media/services/storage.service";
-import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { TweetReplySubject } from "@/modules/notifications/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { TweetReplySubject } from "@/modules/notifications/types/notification_events.types";
 import { MediaTypes } from "@/modules/media/constants";
 import { Tweet } from "../entities/tweet.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
@@ -83,12 +83,14 @@ export class TweetsService implements OnModuleDestroy{
           event: NotificationTypes.REPLY, 
           authUserId: authUser.id,
           eventTargetUserId: parent_tweet.user.id 
-        } // should include prob the tweeet message too or something // cant spam with replies so may not need caching
+        } 
         
         const newNotification = this.notificationsRepository.create({
           type: NotificationTypes.REPLY,
           text: body.text_body,
-          user: { id: parent_tweet.user.id }   // should be to the target user ??? or should have a to and from in db ???
+          action_user: { id: authUser.id },
+          target_user: { id: parent_tweet.user.id },
+          tweet: { id: parent_tweet.id }
         });
 
         this.eventEmitter.emit('new.notification', { 
