@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy } from "@nestjs/common";
 import { Subject, filter, takeWhile } from "rxjs";
 import { UsersService } from "../users/services/users.service";
 import { TweetsService } from "../tweets/services/tweets.service";
-import { FollowNotificationEvent, TweetLikeEvent } from "./notification_events.types";
+import { FollowNotificationEvent, TweetLikeEvent, TweetReplySubject } from "./notification_events.types";
 import { LikesService } from "../likes/services/likes.service";
 
 @Injectable()
@@ -17,24 +17,23 @@ export class NotificationsService implements OnModuleDestroy{
     this.handleTweetRepliesEvents();
   }
 
-  private sseSubject$: Subject<string> = new Subject<string>()
+  private sseSubject$ = new Subject<string>()
 
   private handleFriendshipFollowEvent() {
     this.usersSevice.getFriendshipActionsObservable().subscribe((eventData) => {      
-      this.sseSubject$.next(JSON.stringify(eventData));
+      this.sseSubject$.next(eventData as string);
     });
   }
 
   private handleTweetLikesEvents() {
     this.likesService.likesObservable().subscribe((eventData) => {
-      console.log('wtf', eventData)
-      this.sseSubject$.next(JSON.stringify(eventData));
+      this.sseSubject$.next(eventData as string);
     });
   }
 
   private handleTweetRepliesEvents() {
     this.tweetsService.tweetsRepliesObservable().subscribe((eventData) => {
-      this.sseSubject$.next(JSON.stringify(eventData));
+      this.sseSubject$.next(eventData as string);
     });
   }
 
@@ -42,7 +41,7 @@ export class NotificationsService implements OnModuleDestroy{
     return this.sseSubject$.asObservable().pipe(
       takeWhile(() => true),
       filter((eventData) => { 
-        const parsedEventData = JSON.parse(eventData) as FollowNotificationEvent | TweetLikeEvent;
+        const parsedEventData = JSON.parse(eventData) as Exclude<FollowNotificationEvent | TweetLikeEvent | TweetReplySubject, string>;
         
         return parsedEventData.eventTargetUserId === userId;
       })

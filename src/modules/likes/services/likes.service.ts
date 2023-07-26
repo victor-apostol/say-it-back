@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Subject } from "rxjs";
@@ -29,7 +29,7 @@ export class LikesService {
     private readonly eventEmitter: EventEmitter2
   ) {}
     
-  private readonly likesSubject$ = new Subject<TweetLikeEvent>()
+  private readonly likesSubject$ = new Subject<TweetLikeEvent | string>()
   
   async createLike(authUser: IJwtPayload, body: CreateLikeDto): Promise<any | BadRequestException> { 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -93,7 +93,6 @@ export class LikesService {
     
       return { ...tweet, likeId: like.id }
     } catch(err) {
-      console.log("ERROR", err)
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(err?.message);
     } finally {
