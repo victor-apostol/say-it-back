@@ -138,22 +138,33 @@ export class UsersService implements OnModuleDestroy {
 
     if (!authUser) throw new BadRequestException(messageUserNotFound);
 
-    const followingsOfFollowings = await this.userRepository
+    const userWithFollowingsOfFollowings = await this.userRepository
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.following", "following")
       .leftJoinAndSelect("following.following", "followingsOfFollowings")
       .where("user.id = :userId", { userId: user.id })
-      .andWhere('followingsOfFollowings.id NOT IN (:...followedIds)', { followedIds: authUser.following.map((followingUser) => followingUser.id) })
+      .andWhere('followingsOfFollowings.id NOT IN (:...followedIds)', { 
+        followedIds: [...authUser.following.map((followingUser) => followingUser.id), authUser.id]
+      })
       // .orderBy('RANDOM()')
       .getOne()
 
-      const flattenedUsers = followingsOfFollowings 
-      ? followingsOfFollowings.following.flatMap((followedUser) =>
-          followedUser.following.filter((user) => !followingsOfFollowings.following.map((followedUser) => followedUser.id).includes(user.id))
-        )
-      : [];// fetch top people on twitter
+    const flattenedUsers = userWithFollowingsOfFollowings
+      ? Array.from(new Set(userWithFollowingsOfFollowings.following.flatMap((followedUser) => followedUser.following)))
+      : await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect("user.following", "following")
+        .leftJoinAndSelect('user.followed', 'followed')
+        .where('following.id NOT IN (:...followedIds)', { 
+          followedIds: [...authUser.following.map((followingUser) => followingUser.id), authUser.id]
+        })
+        .select('user')
+        .orderBy('COUNT(followed.id)', 'DESC')
+        .groupBy('user.id')
+        .limit(3)
+        .getMany();
 
-      // populate with wheter i am folowing or nah the user
+    console.log(userWithFollowingsOfFollowings)
 
     return flattenedUsers;
   }

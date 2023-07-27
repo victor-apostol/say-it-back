@@ -4,17 +4,17 @@ import { RegisterDto } from "@/modules/auth/dto/register.dto";
 import { LoginDto } from "@/modules/auth/dto/login.dto";
 import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { AuthUser } from "@/utils/decorators/authUser.decorator";
-import { ConfigService } from "@nestjs/config";
 import { JwtGuard } from "@/modules/auth/guards/auth.guard";
 import { oAuthDto } from "./dto/oauth.dto";
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private readonly configService: ConfigService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @UseGuards(JwtGuard)
   @Get('info')
   async getAuthInfo(@AuthUser() user: IJwtPayload): Promise<IJwtPayload> {
+    console.log('requested')
     return user;
   }
   

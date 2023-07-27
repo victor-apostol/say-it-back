@@ -5,7 +5,7 @@ import { User } from "../users/entities/user.entity";
 import { SseGuard } from "../auth/guards/sse.guard";
 import { JwtGuard } from "../auth/guards/auth.guard";
 import { Notification } from "./notification.entity";
-import { TweetPaginationDto } from "../tweets/dto/pagination.dto";
+import { PaginationDto } from "@/utils/global/pagination.dto";
 
 @Controller('notifications')
 export class NotificationsController {
@@ -15,7 +15,7 @@ export class NotificationsController {
   @Get("")
   async getNotifications(
     @AuthUser() user: User, 
-    @Query() query: TweetPaginationDto // basically only pagination
+    @Query() query: PaginationDto 
   ): Promise<{ notifications: Array<Notification>, hasMore: boolean }> {
     return this.notificationsService.userNotifications(user, query.offset, query.take);
   }
