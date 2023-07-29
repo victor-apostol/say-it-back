@@ -4,8 +4,8 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Subject } from "rxjs";
 import { Repository } from "typeorm";
 import { User } from "../entities/user.entity";
-import { NotificationTypes } from "@/modules/notifications/notification.types";
-import { FollowNotificationEvent } from "@/modules/notifications/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { messageUserNotFound } from "@/utils/global.constants";
 import { Notification } from "@/modules/notifications/notification.entity";
@@ -72,7 +72,8 @@ export class UsersService implements OnModuleDestroy {
 
       const newNotification = this.notificationRepository.create({
         type: NotificationTypes.FOLLOW,
-        user: { id: authUser.id }
+        action_user: { id: authUser.id },
+        target_user: { id: targetUser.id }
       })
 
       this.eventEmitter.emit('new.notification', { 
@@ -137,22 +138,33 @@ export class UsersService implements OnModuleDestroy {
 
     if (!authUser) throw new BadRequestException(messageUserNotFound);
 
-    const followingsOfFollowings = await this.userRepository
+    const userWithFollowingsOfFollowings = await this.userRepository
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.following", "following")
       .leftJoinAndSelect("following.following", "followingsOfFollowings")
       .where("user.id = :userId", { userId: user.id })
-      .andWhere('followingsOfFollowings.id NOT IN (:...followedIds)', { followedIds: authUser.following.map((followingUser) => followingUser.id) })
+      .andWhere('followingsOfFollowings.id NOT IN (:...followedIds)', { 
+        followedIds: [...authUser.following.map((followingUser) => followingUser.id), authUser.id]
+      })
       // .orderBy('RANDOM()')
       .getOne()
 
-      const flattenedUsers = followingsOfFollowings 
-      ? followingsOfFollowings.following.flatMap((followedUser) =>
-          followedUser.following.filter((user) => !followingsOfFollowings.following.map((followedUser) => followedUser.id).includes(user.id))
-        )
-      : [];// fetch top people on twitter
+    const flattenedUsers = userWithFollowingsOfFollowings
+      ? Array.from(new Set(userWithFollowingsOfFollowings.following.flatMap((followedUser) => followedUser.following)))
+      : await this.userRepository
+        .createQueryBuilder('user')
+        .leftJoinAndSelect("user.following", "following")
+        .leftJoinAndSelect('user.followed', 'followed')
+        .where('following.id NOT IN (:...followedIds)', { 
+          followedIds: [...authUser.following.map((followingUser) => followingUser.id), authUser.id]
+        })
+        .select('user')
+        .orderBy('COUNT(followed.id)', 'DESC')
+        .groupBy('user.id')
+        .limit(3)
+        .getMany();
 
-      // populate with wheter i am folowing or nah the user
+    console.log(userWithFollowingsOfFollowings)
 
     return flattenedUsers;
   }

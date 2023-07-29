@@ -18,7 +18,7 @@ import { TweetsService } from "../services/tweets.service";
 import { AuthUser } from "src/utils/decorators/authUser.decorator";
 import { IJwtPayload } from "src/modules/auth/interfaces/jwt.interface";
 import { Tweet } from "../entities/tweet.entity";
-import { TweetPaginationDto } from "../dto/pagination.dto";
+import { PaginationDto } from "@/utils/global/pagination.dto";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { fileMaxSizeInKb, maxFilesCount } from "@/modules/media/constants";
@@ -34,7 +34,7 @@ export class TweetsController {
   @Get('/feed')
   async getFeedTweets(
     @AuthUser() user: User, 
-    @Query() query: TweetPaginationDto
+    @Query() query: PaginationDto
   ): Promise<IPaginatedTweets> {
     return await this.tweetsService.getFeedTweets(user, query.offset, query.take);
   }
@@ -42,7 +42,7 @@ export class TweetsController {
   @Get('user/:userId') 
   async getUserTweets(
     @Param('userId', ParseIntPipe) userId: number, 
-    @Query() query: TweetPaginationDto
+    @Query() query: PaginationDto
   ): Promise<IPaginatedTweets> { 
     return await this.tweetsService.getUserTweets(userId, query.offset, query.take);
   }
@@ -59,7 +59,7 @@ export class TweetsController {
   async getTweetReplies(
     @AuthUser() user: IJwtPayload,
     @Param('tweetId', ParseIntPipe) tweetId: number,
-    @Query() query: TweetPaginationDto
+    @Query() query: PaginationDto
   ): Promise<{ tweets: Array<Tweet> }>  { 
     return { tweets: await this.tweetsService.getTweetReplies(user.id, tweetId, query.offset, query.take) }
   }
