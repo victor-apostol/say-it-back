@@ -5,11 +5,11 @@ import { TweetsModule } from "../tweets/tweets.module";
 import { LikesModule } from "../likes/likes.module";
 import { RedisModule } from "../redis/redis.module";
 import { Notification } from "./notification.entity";
+import { User } from "../users/entities/user.entity";
+import { NotificationsEventsService } from "./notifications.listener";
 import { NotificationsController } from "./notifications.controller";
 import { NotificationsService } from "./notifications.service";
-import { NotificationsEventsService } from "./notifications.listener";
 import { redisOptions } from "@/config/options";
-
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { redisOptions } from "@/config/options";
     UsersModule, 
     TweetsModule, 
     LikesModule,
-    TypeOrmModule.forFeature([Notification])
+    TypeOrmModule.forFeature([Notification, User])
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsEventsService]

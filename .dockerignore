@@ -1,6 +1,3 @@
-.env
-dist/
 node_modules
-.vscode/
-migrations/
+migrations
 postgres-configMap.yaml

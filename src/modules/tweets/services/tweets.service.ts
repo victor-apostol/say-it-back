@@ -56,13 +56,16 @@ export class TweetsService implements OnModuleDestroy{
           .createQueryBuilder('tweet')
           .leftJoinAndSelect('tweet.user', 'user')
           .where('tweet.id = :parent_id', { parent_id: parseInt(body.parent_id) })
-          .select(['user.id', 'tweet'])
+          .select(['user.id', 'user.notifications_count', 'tweet'])
           .getOne();
 
         if (!parent_tweet) throw new BadRequestException(messageParentTweetDoesNotExist);
 
+        parent_tweet.user.notifications_count += 1;
         parent_tweet.replies_count += 1;
+
         await queryRunner.manager.save(parent_tweet);
+        await queryRunner.manager.save(User, parent_tweet.user);
       } 
       
       const tweet = this.tweetsRepository.create({
@@ -70,6 +73,7 @@ export class TweetsService implements OnModuleDestroy{
         user: authUser,
         parent_tweet
       });
+
       await queryRunner.manager.save(tweet);
       
       const media = files?.length > 0

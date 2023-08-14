@@ -19,6 +19,9 @@ export class NotificationsService implements OnModuleDestroy{
   @InjectRepository(Notification)
   private readonly notificationsRepository: Repository<Notification>;
 
+  @InjectRepository(User)
+  private readonly usersRepository: Repository<User>;
+
   constructor(
     private readonly usersSevice: UsersService, 
     private readonly tweetsService: TweetsService,
@@ -50,24 +53,29 @@ export class NotificationsService implements OnModuleDestroy{
   }
 
   async userNotifications(
-    user: User, 
+    authUser: User, 
     offset = 0, 
     take = NOTIFICATIONS_PAGINATION_TAKE 
   ): Promise<{ notifications: Array<Notification>, hasMore: boolean }> {
-    const userNotifications = await this.notificationsRepository.find({ 
-      where: {
-        target_user: { id: user.id }
-      },
-      relations: {
-        action_user: true,
-        tweet: true
-      },
-      skip: offset,
-      take: take + 1
-    });
+    console.log("Fetched notifs")
+    const userNotifications = await this.notificationsRepository
+      .createQueryBuilder('notification')
+      .leftJoinAndSelect('notification.action_user', 'action_user')
+      .leftJoinAndSelect('notification.tweet', 'tweet')
+      .leftJoin('tweet.media', 'media')
+      .addSelect(['media.path'])
+      .where('notification.target_user = :userId', { userId: authUser.id })
+      .skip(offset)
+      .take(take + 1)
+      .getMany();
 
     const hasMore = userNotifications.length > take;
     if (hasMore) userNotifications.splice(-1); 
+
+    if (authUser.notifications_count !== 0) {
+      authUser.notifications_count = 0;
+      await this.usersRepository.save(authUser);
+    }
 
     return {
       notifications: userNotifications,
