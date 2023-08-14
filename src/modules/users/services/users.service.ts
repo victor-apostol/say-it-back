@@ -164,8 +164,6 @@ export class UsersService implements OnModuleDestroy {
         .limit(3)
         .getMany();
 
-    console.log(userWithFollowingsOfFollowings)
-
     return flattenedUsers;
   }
 }

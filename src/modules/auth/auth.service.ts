@@ -9,7 +9,6 @@ import { User } from "../users/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dto/login.dto";
 import { IJwtPayload } from "./interfaces/jwt.interface";
-import { messageUserNotFound } from "@/utils/global.constants";
 import { oAuthDto } from "./dto/oauth.dto";
 
 @Injectable()

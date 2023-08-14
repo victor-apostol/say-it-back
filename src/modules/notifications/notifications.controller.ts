@@ -14,10 +14,10 @@ export class NotificationsController {
   @UseGuards(JwtGuard)
   @Get("")
   async getNotifications(
-    @AuthUser() user: User, 
+    @AuthUser() authUser: User, 
     @Query() query: PaginationDto 
   ): Promise<{ notifications: Array<Notification>, hasMore: boolean }> {
-    return this.notificationsService.userNotifications(user, query.offset, query.take);
+    return this.notificationsService.userNotifications(authUser, query.offset, query.take);
   }
 
   @UseGuards(SseGuard)
