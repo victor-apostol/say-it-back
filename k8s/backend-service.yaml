@@ -7,6 +7,6 @@ metadata:
 spec:
   selector:
       app: backend
-  type: ClusterIP
+  type: LoadBalancer
   ports:
     - port: 7777

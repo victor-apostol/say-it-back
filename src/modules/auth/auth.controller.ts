@@ -6,7 +6,6 @@ import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
 import { AuthUser } from "@/utils/decorators/authUser.decorator";
 import { JwtGuard } from "@/modules/auth/guards/auth.guard";
 import { oAuthDto } from "./dto/oauth.dto";
-import { Request } from "express";
 
 @Controller('auth')
 export class AuthController {
@@ -19,8 +18,7 @@ export class AuthController {
   }
   
   @Post('register')
-  async register(@Body() body: RegisterDto, @Req() req: Request): Promise<string> {
-    console.log(req)
+  async register(@Body() body: RegisterDto): Promise<string> {
     return await this.authService.register(body);
   }
 
