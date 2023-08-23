@@ -1,6 +1,13 @@
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
-import { defaultUserAvatarPath } from "@/utils/global.constants";
-import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { 
+  AfterLoad,
+  Column, 
+  Entity, 
+  JoinTable, 
+  ManyToMany, 
+  OneToMany, 
+  PrimaryGeneratedColumn 
+} from "typeorm";
 
 @Entity('users')
 export class User {
@@ -8,16 +15,22 @@ export class User {
   id: number;
 
   @Column({ type: 'varchar', length: 32 })
-  first_name: string;
+  name: string;
 
-  @Column({ type: 'varchar', length: 32 })
-  last_name: string;
+  @Column({ type: 'varchar', length: 32, unique: true })
+  username: string;
+
+  @Column({ type: 'varchar', length: 120 })
+  bio: string;
 
   @Column({ type: 'varchar', length: 128, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 128, default: defaultUserAvatarPath})
+  @Column({ type: 'varchar', length: 128, default: process.env.DEFAULT_AVATAR_IMAGE })
   avatar: string; 
+
+  @Column({ type: 'varchar', length: 128, default: process.env.DEFAULT_BACKGROUND_IMAGE })
+  background: string; 
   
   @Column({ type: 'varchar', length: 128, select: false })
   password: string;
@@ -51,7 +64,11 @@ export class User {
   @ManyToMany(() => User, user => user.followed)
   following: Array<User>;
 
-  constructor(partial: Partial<User>) {
-    Object.assign(this, partial);
+  @AfterLoad()
+  appendS3BucketName() {
+    const bucketName = process.env.AWS_S3_BUCKET;
+
+    this.avatar = `https://${bucketName}.s3.amazonaws.com/${this.avatar}`;
+    this.background = `https://${bucketName}.s3.amazonaws.com/${this.background}`;
   }
 }

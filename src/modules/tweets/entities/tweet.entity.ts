@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
-import { Media } from "@/modules/media/entities/media.entitiy";
+import { Media } from "@/modules/media/entities/media.entity";
 
 @Entity('tweets')
 export class Tweet {

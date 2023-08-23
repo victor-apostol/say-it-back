@@ -1,16 +1,26 @@
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, OnModuleDestroy } from "@nestjs/common";
+import { 
+  BadRequestException, 
+  Injectable, 
+  InternalServerErrorException, 
+  OnModuleDestroy 
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { DataSource, IsNull, Repository } from "typeorm";
 import { Subject } from "rxjs";
 import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
+import { Tweet } from "../entities/tweet.entity";
+import { Media } from "@/modules/media/entities/media.entity";
 import { UsersService } from "@/modules/users/services/users.service";
+import { MediaService } from "@/modules/media/services/media.service";
 import { StorageService } from "@/modules/media/services/storage.service";
+import { CreateTweetDto } from "../dto/createTweet.dto";
 import { NotificationTypes } from "@/modules/notifications/types/notification.types";
 import { TweetReplySubject } from "@/modules/notifications/types/notification_events.types";
+import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
+import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { MediaTypes } from "@/modules/media/constants";
-import { Tweet } from "../entities/tweet.entity";
-import { CreateTweetDto } from "../dto/createTweet.dto";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageParentTweetDoesNotExist, 
@@ -18,9 +28,6 @@ import {
   messageTweetNotFound, 
   messageUserNotFound 
 } from "@/utils/global.constants";
-import { EventEmitter2 } from "@nestjs/event-emitter";
-import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
-import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 
 @Injectable()
 export class TweetsService implements OnModuleDestroy{
@@ -32,6 +39,7 @@ export class TweetsService implements OnModuleDestroy{
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly mediaService: MediaService,
     private readonly storageService: StorageService,
     private readonly dataSource: DataSource,   
     private readonly eventEmitter: EventEmitter2
@@ -76,9 +84,27 @@ export class TweetsService implements OnModuleDestroy{
 
       await queryRunner.manager.save(tweet);
       
-      const media = files?.length > 0
-        ? await this.storageService.uploadFilesToS3Bucket(files, authUser, tweet.id, media_type, queryRunner)
-        : [];
+      const media = [] as Array<Media>; 
+      
+      if (files?.length > 0) {
+        await Promise.all(
+          files.map(async (file) => {
+            const uploadFileInfo = this.storageService.getUploadFileInfo(file);
+
+            const mediaEntity = await this.mediaService.createTweetMedia(
+              uploadFileInfo.filename, 
+              authUser, 
+              tweet.id, 
+              media_type, 
+              queryRunner
+            );
+
+            await this.storageService.uploadFileToS3Bucket(file, uploadFileInfo.filename);
+
+            media.push(mediaEntity);
+          })
+        )
+      }
 
       await queryRunner.commitTransaction();
 

@@ -1,14 +1,18 @@
-import { BadRequestException, Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { BadRequestException, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Subject } from "rxjs";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { User } from "../entities/user.entity";
-import { NotificationTypes } from "@/modules/notifications/types/notification.types";
-import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
-import { FriendshipActions } from "../interfaces/friendship.interface";
-import { messageUserNotFound } from "@/utils/global.constants";
 import { Notification } from "@/modules/notifications/notification.entity";
+import { FriendshipActions } from "../interfaces/friendship.interface";
+import { messageUnableToUpdateProfile, messageUserNotFound } from "@/utils/global.constants";
+import { UpdateProfileDto } from "../dto/updateProfile.dto";
+import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
+import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { StorageService } from "@/modules/media/services/storage.service";
+import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class UsersService implements OnModuleDestroy {
@@ -20,9 +24,14 @@ export class UsersService implements OnModuleDestroy {
   
   constructor(
     private readonly eventEmitter: EventEmitter2,
+    private readonly dataSource: DataSource, 
+    private readonly storageService: StorageService,
+    private readonly cfgService: ConfigService
   ) {}
 
-  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>()
+  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>();
+  private readonly defaultBackgroundFilename = this.cfgService.get("DEFAULT_BACKGROUND_IMAGE");
+  private readonly defaultBackgroundPath = `https://${this.cfgService.get("AWS_S3_BUCKET")}.s3.amazonaws.com/${this.defaultBackgroundFilename}`;
 
   async findUser(id: number): Promise<User | null> {
     return await this.userRepository.findOneBy({ id });
@@ -165,6 +174,57 @@ export class UsersService implements OnModuleDestroy {
         .getMany();
 
     return flattenedUsers;
+  }
+
+  async updateProfile(
+    authUser: User, 
+    body: UpdateProfileDto,
+    files: { newAvatar?: Express.Multer.File, newBackground?: Express.Multer.File } = {}
+  ): Promise<IUpdateProfileResponse> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const { defaultBackground, ...restBody } = body;
+
+    try {
+      if (files.newAvatar) {
+        const uploadFileInfo = this.storageService.getUploadFileInfo(files.newAvatar[0]);
+        
+        await this.storageService.uploadFileToS3Bucket(files.newAvatar[0], uploadFileInfo.filename);
+
+        restBody["avatar"] = uploadFileInfo.filename;
+      } else if (files.newBackground) {
+        const uploadFileInfo = this.storageService.getUploadFileInfo(files.newBackground[0]);
+
+        await this.storageService.uploadFileToS3Bucket(files.newBackground[0], uploadFileInfo.filename);
+
+        restBody["background"] = uploadFileInfo.filename;
+      } else if (body.defaultBackground && authUser.background !== this.defaultBackgroundPath) {
+        restBody["background"] = this.defaultBackgroundFilename;
+      }
+
+      if (Object.keys(restBody).length > 0) {
+        const result = await queryRunner.manager.update(User, { id: authUser.id }, {
+          ...restBody
+        });
+
+        if (result.affected === 0) throw new BadRequestException(messageUnableToUpdateProfile);
+      }
+
+      await queryRunner.commitTransaction(); 
+      
+      return {
+        name: body.name || authUser.name,
+        bio: body.bio || authUser.bio,
+      }
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(err?.message);
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
 

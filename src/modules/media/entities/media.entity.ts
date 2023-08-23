@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { AfterLoad, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 import { User } from "src/modules/users/entities/user.entity";
 import { MediaTypes } from "@/modules/media/constants";
@@ -22,4 +22,9 @@ export class Media {
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
+
+  @AfterLoad()
+  appendS3BucketName() {
+    this.path = `https://${process.env.AWS_S3_BUCKET}.s3.amazonaws.com/${this.path}`;
+  }
 }

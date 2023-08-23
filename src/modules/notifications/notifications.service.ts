@@ -57,7 +57,6 @@ export class NotificationsService implements OnModuleDestroy{
     offset = 0, 
     take = NOTIFICATIONS_PAGINATION_TAKE 
   ): Promise<{ notifications: Array<Notification>, hasMore: boolean }> {
-    console.log("Fetched notifs")
     const userNotifications = await this.notificationsRepository
       .createQueryBuilder('notification')
       .leftJoinAndSelect('notification.action_user', 'action_user')
