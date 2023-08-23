@@ -21,7 +21,7 @@ import { Tweet } from "../entities/tweet.entity";
 import { PaginationDto } from "@/utils/global/pagination.dto";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { FilesInterceptor } from "@nestjs/platform-express";
-import { fileMaxSizeInKb, maxFilesCount } from "@/modules/media/constants";
+import { imageMaxSizeInKb, maxFilesCount, videoMaxSizeInKb } from "@/modules/media/constants";
 import { MediaValidator } from "@/modules/media/validators/media.validator";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { User } from "@/modules/users/entities/user.entity";
@@ -73,7 +73,10 @@ export class TweetsController {
       new ParseFilePipe({
         fileIsRequired: false,
         validators: [
-          new MediaValidator({ maxSize: fileMaxSizeInKb })
+          new MediaValidator({ 
+            imageMaxSize: imageMaxSizeInKb,
+            videoMaxSize: videoMaxSizeInKb
+          })
         ],
       })
     ) files: Array<Express.Multer.File>

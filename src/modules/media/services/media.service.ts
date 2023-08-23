@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { QueryRunner, Repository } from "typeorm";
-import { Media } from "@/modules/media/entities/media.entitiy";
+import { Media } from "@/modules/media/entities/media.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { MediaTypes } from "../constants";
@@ -12,7 +12,7 @@ export class MediaService {
   @InjectRepository(Media)
   private readonly mediaRepository: Repository<Media>;
 
-  async saveFilePath(
+  async createTweetMedia(
     filePath: string, 
     authUser: User, 
     tweetId: number, 

@@ -63,11 +63,14 @@ export class AuthService {
 
   async oauth(body: oAuthDto): Promise<string> {
     let user = await this.userRepository.findOneBy({ email: body.email, is_oauth: true });
-    
+
+    const name = `${body.first_name} ${body.last_name}`;
+    const username = 'oauthHardcodede';
+
     if (!user) {
       user = this.userRepository.create({
-        first_name: body.first_name,
-        last_name: body.last_name,
+        name,
+        username,
         email: body.email,
         avatar: body.avatar,
         is_oauth: true,

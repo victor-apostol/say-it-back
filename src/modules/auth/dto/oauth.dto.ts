@@ -2,6 +2,7 @@ import { IsEmail, IsString, MaxLength } from "class-validator";
 
 export class oAuthDto {
   @IsEmail()
+  @MaxLength(128)
   email: string;
 
   @IsString()
@@ -11,7 +12,6 @@ export class oAuthDto {
   @IsString()
   @MaxLength(29)
   last_name: string;
-
 
   @IsString()
   @MaxLength(201)
