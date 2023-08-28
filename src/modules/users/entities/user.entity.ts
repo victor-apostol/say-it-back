@@ -1,4 +1,3 @@
-import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { 
   AfterLoad,
   Column, 
@@ -8,6 +7,13 @@ import {
   OneToMany, 
   PrimaryGeneratedColumn 
 } from "typeorm";
+import { config } from "dotenv";
+import { Tweet } from "@/modules/tweets/entities/tweet.entity";
+
+config();
+
+const defaultBackgroundUrl = process.env.DEFAULT_BACKGROUND_IMAGE;
+const defaultAvatarUrl = process.env.DEFAULT_AVATAR_IMAGE;
 
 @Entity('users')
 export class User {
@@ -20,16 +26,16 @@ export class User {
   @Column({ type: 'varchar', length: 32, unique: true })
   username: string;
 
-  @Column({ type: 'varchar', length: 120 })
+  @Column({ type: 'varchar', length: 120, default: "" })
   bio: string;
 
   @Column({ type: 'varchar', length: 128, unique: true })
   email: string;
 
-  @Column({ type: 'varchar', length: 128, default: process.env.DEFAULT_AVATAR_IMAGE })
+  @Column({ type: 'varchar', length: 128, default: defaultAvatarUrl })
   avatar: string; 
 
-  @Column({ type: 'varchar', length: 128, default: process.env.DEFAULT_BACKGROUND_IMAGE })
+  @Column({ type: 'varchar', length: 128, default: defaultBackgroundUrl })
   background: string; 
   
   @Column({ type: 'varchar', length: 128, select: false })

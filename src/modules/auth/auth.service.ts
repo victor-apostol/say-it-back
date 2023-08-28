@@ -19,7 +19,7 @@ export class AuthService {
   constructor(private readonly configService: ConfigService, private readonly jwtService: JwtService) {}
 
   async register(body: RegisterDto): Promise<string> { 
-    const user = await this.userRepository.findOneBy({ email: body.email, is_oauth: false });
+    const user = await this.userRepository.findOneBy({ email: body.email });
     if (user) throw new BadRequestException(messageAccountAlreadyExists);
 
     const passwordHash = await bcrypt.hash(body.password, Number(this.configService.get<string>('SALT')));

@@ -1,0 +1,127 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": "tsconfig.json",
+    "tsconfigRootDir": "__dirname",
+    "sourceType": "module",
+    "ecmaVersion": "es2019",
+    "createDefaultProgram": true
+  },
+  "plugins": [
+    "@typescript-eslint/eslint-plugin",
+    "@darraghor/nestjs-typed",
+    "unicorn",
+    "import",
+    "deprecation"
+  ],
+  "extends": [
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended",
+    "plugin:@darraghor/nestjs-typed/recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:import/typescript",
+    "plugin:import/recommended",
+    "plugin:import/errors",
+    "plugin:unicorn/all",
+    "prettier"
+  ],
+  "root": true,
+  "env": {
+    "node": true,
+    "jest": true,
+    "es6": true,
+    "browser": false
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    ".eslintrc.js"
+  ],
+  "rules": {
+    "no-duplicate-imports": "error",
+    "no-param-reassign": "error",
+    "unicorn/filename-case": "off",
+    "no-array-constructor": "error",
+    "no-plusplus": ["error", {"allowForLoopAfterthoughts": true}],
+    "import/prefer-default": "off",
+    "unicorn/prevent-abbreviations": [
+      "off",
+      {
+        "ignore": ["\\.e2e*", "\\.spec*", "\\*idx*"]
+      }
+    ],
+    "import/order": [
+      "error",
+      {
+        "groups": ["builtin", "external", "internal"],
+        "pathGroups": [
+          {
+            "pattern": "@nestjs/*",
+            "group": "external"
+          },
+          {
+            "pattern": "@prisma/client",
+            "group": "internal"
+          }
+        ],
+        "pathGroupsExcludedImportTypes": ["react"],
+        "newlines-between": "always",
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        }
+      }
+    ],
+    "unicorn/prefer-top-level-await": "off",
+    "unicorn/no-null": "off",
+    "unicorn/no-keyword-prefix": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-unused-vars": ["error", {"argsIgnorePattern": "^_"}],
+    "no-multi-spaces": "error",
+    "linebreak-style": ["error", "unix"],
+    "newline-before-return": "error",
+    "no-await-in-loop": "off",
+    "padding-line-between-statements": [
+      "error",
+      {
+        "blankLine": "always",
+        "prev": ["const", "let", "var"],
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": ["const", "let", "var"],
+        "next": ["const", "let", "var"]
+      }
+    ],
+    "prefer-const": [
+      "error",
+      {
+        "destructuring": "any",
+        "ignoreReadBeforeAssign": false
+      }
+    ],
+    "quotes": [
+      "error",
+      "single",
+      {
+        "allowTemplateLiterals": true,
+        "avoidEscape": true
+      }
+    ],
+    "no-unused-vars": [
+      "error",
+      {
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true,
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-console": "off",
+    "@darraghor/nestjs-typed/injectable-should-be-provided": "off",
+    "@darraghor/nestjs-typed/validated-non-primitive-property-needs-type-decorator": "off",
+    "deprecation/deprecation": "warn"
+  }
+}

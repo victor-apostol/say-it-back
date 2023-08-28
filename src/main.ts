@@ -13,7 +13,6 @@ async function bootstrap() {
       'http://localhost:3001',
       'http://192.168.59.101',
       'http://192.168.59.100',
-      'http://frontend-service',
     ],
     credentials: true
   })

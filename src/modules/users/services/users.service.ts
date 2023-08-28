@@ -1,18 +1,19 @@
 import { BadRequestException, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { InjectRepository } from "@nestjs/typeorm";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { Subject } from "rxjs";
 import { DataSource, Repository } from "typeorm";
+import { Subject } from "rxjs";
 import { User } from "../entities/user.entity";
 import { Notification } from "@/modules/notifications/notification.entity";
-import { FriendshipActions } from "../interfaces/friendship.interface";
-import { messageUnableToUpdateProfile, messageUserNotFound } from "@/utils/global.constants";
+import { StorageService } from "@/modules/media/services/storage.service";
 import { UpdateProfileDto } from "../dto/updateProfile.dto";
+import { messageUnableToUpdateProfile, messageUserNotFound } from "@/utils/global.constants";
 import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
 import { NotificationTypes } from "@/modules/notifications/types/notification.types";
-import { StorageService } from "@/modules/media/services/storage.service";
+import { FriendshipActions } from "../interfaces/friendship.interface";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
-import { ConfigService } from "@nestjs/config";
+import { SearchService } from "@/modules/elasticsearch/search.service";
 
 @Injectable()
 export class UsersService implements OnModuleDestroy {
@@ -26,12 +27,15 @@ export class UsersService implements OnModuleDestroy {
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource, 
     private readonly storageService: StorageService,
-    private readonly cfgService: ConfigService
+    private readonly cfgService: ConfigService,
+    private readonly searchService: SearchService
   ) {}
 
   private readonly friendshipAction$ = new Subject<FollowNotificationEvent>();
+
+  private readonly s3Host = `https://${this.cfgService.get("AWS_S3_BUCKET")}.s3.amazonaws.com`;
   private readonly defaultBackgroundFilename = this.cfgService.get("DEFAULT_BACKGROUND_IMAGE");
-  private readonly defaultBackgroundPath = `https://${this.cfgService.get("AWS_S3_BUCKET")}.s3.amazonaws.com/${this.defaultBackgroundFilename}`;
+  private readonly defaultBackgroundPath = `${this.s3Host}/${this.defaultBackgroundFilename}`;
 
   async findUser(id: number): Promise<User | null> {
     return await this.userRepository.findOneBy({ id });
@@ -225,6 +229,48 @@ export class UsersService implements OnModuleDestroy {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async searchUsers(query: string, page = 1, size = 10): Promise<Array<User>> {
+    const esResult = await this.searchService.search(
+      'search_users', 
+      {
+        bool: {
+          should: [
+            {
+              regexp: {
+                name: {
+                  value: `${query}.*`,
+                  case_insensitive: true,
+                  boost: 2
+                }
+              }
+            },
+            {
+              regexp: {
+                username: {
+                  value: `${query}.*`,
+                  case_insensitive: true
+                }
+              }
+            }
+          ],
+          minimum_should_match: 1
+        }
+      },
+      {
+        from: (page - 1) * size, 
+        size: size
+      }
+    )
+
+    const searchResult = esResult.hits.hits.map((hit) => {
+      (hit._source as User).avatar = `${this.s3Host}/${(hit._source as User).avatar}`;
+    
+      return hit._source;
+    });
+
+    return searchResult as Array<User>;
   }
 }
 
