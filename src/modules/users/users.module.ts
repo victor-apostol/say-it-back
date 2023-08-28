@@ -6,11 +6,13 @@ import { User } from "./entities/user.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { Notification } from "@/modules/notifications/notification.entity";
 import { MediaModule } from "@/modules/media/media.module";
+import { SearchModule } from "@/modules/elasticsearch/search.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Tweet, Notification]),
-    MediaModule
+    MediaModule,
+    SearchModule
   ],
   controllers: [UsersController],
   providers: [UsersService],
