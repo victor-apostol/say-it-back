@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthService } from "@/modules/auth/auth.service";
 import { RegisterDto } from "@/modules/auth/dto/register.dto";
 import { LoginDto } from "@/modules/auth/dto/login.dto";
@@ -15,6 +15,13 @@ export class AuthController {
   @Get('info')
   async getAuthInfo(@AuthUser() user: IJwtPayload): Promise<IJwtPayload> {
     return user;
+  }
+
+  @Get("/available/username")
+  async isUsernameAvailable(@Query("username") username: string): Promise<{ available: boolean }> {    
+    const result = await this.authService.isUsernameAvailable(username); 
+
+    return { available: result }
   }
   
   @Post('register')

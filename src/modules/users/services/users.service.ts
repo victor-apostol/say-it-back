@@ -37,8 +37,8 @@ export class UsersService implements OnModuleDestroy {
   private readonly defaultBackgroundFilename = this.cfgService.get("DEFAULT_BACKGROUND_IMAGE");
   private readonly defaultBackgroundPath = `${this.s3Host}/${this.defaultBackgroundFilename}`;
 
-  async findUser(id: number): Promise<User | null> {
-    return await this.userRepository.findOneBy({ id });
+  async findUser(username: string): Promise<User | null> {
+    return await this.userRepository.findOneBy({ username });
   }
  
   async friendshipAction(authUser: User, targetUserId: number, action: string) {
@@ -107,14 +107,14 @@ export class UsersService implements OnModuleDestroy {
   }
 
   async getUserProfileInfo(
-    targetUserId: number, 
+    targetUsername: string, 
     authUser: User
   ): Promise<{user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
     const user = await this.userRepository
       .createQueryBuilder("user")
       .leftJoinAndSelect("user.followed", "followed")
       .leftJoinAndSelect("user.following", "following")
-      .where("user.id = :userId", { userId: targetUserId })
+      .where("user.username = :username", { username: targetUsername })
       .select(["user","following.id","followed.id"])
       .getOne();
 
@@ -128,7 +128,7 @@ export class UsersService implements OnModuleDestroy {
     
     const amIfollowing = user.followed.some(follower => follower.id === authUser.id);
 
-    return targetUserId !== authUser.id 
+    return targetUsername !== authUser.username 
       ? {...returnObject, amIfollowing: amIfollowing} 
       : returnObject; 
   }

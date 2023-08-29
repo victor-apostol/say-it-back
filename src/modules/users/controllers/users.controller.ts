@@ -6,7 +6,6 @@ import {
   Body, 
   Param, 
   ParseFilePipe, 
-  ParseIntPipe, 
   UploadedFiles, 
   UseGuards, 
   UseInterceptors, 
@@ -40,12 +39,12 @@ export class UsersController {
     return await this.usersService.searchUsers(query.query, query.page, query.size);
   }
 
-  @Get("/:id")
+  @Get("/:username")
   async userProfileInfo(
     @AuthUser() user: User,
-    @Param('id', ParseIntPipe) id: number
+    @Param('username') targetUsername: string
   ): Promise<{ user: User, followingsCount: number, followersCount: number, amIfollowing?: boolean }> {
-    return await this.usersService.getUserProfileInfo(id, user); 
+    return await this.usersService.getUserProfileInfo(targetUsername, user); 
   }
 
   @Post("/friendship/:action")
@@ -53,7 +52,7 @@ export class UsersController {
     return await this.usersService.friendshipAction(user, body.targetUserId, params.action); 
   }
 
-  @Put("/:id")
+  @Put("")
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'newAvatar', maxCount: 1 },

@@ -1,1 +1,1 @@
-export const messageAccountAlreadyExists = 'An account with this email has already been registered';
+export const messageAccountAlreadyExists = 'An account with this email or username has already been registered';
