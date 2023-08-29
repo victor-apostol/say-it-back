@@ -164,7 +164,7 @@ export class TweetsService implements OnModuleDestroy{
     const hasMore = followingListTweets.length > take;
     if (hasMore) followingListTweets.splice(-1); 
    
-    const addTweetsMetadata = this._setTweetsMetadata(followingListTweets, authUser.id);
+    const addTweetsMetadata = this._setTweetsMetadata(followingListTweets, authUser.username);
 
     return {
       tweets: addTweetsMetadata,
@@ -172,8 +172,8 @@ export class TweetsService implements OnModuleDestroy{
     }
   }
 
-  async getUserTweets(targetUserId: number, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
-    const user = await this.usersService.findUser(targetUserId); 
+  async getUserTweets(targetUsername: string, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
+    const user = await this.usersService.findUser(targetUsername); 
     if (!user) throw new BadRequestException(messageUserNotFound);
 
     const tweets = await this.tweetsRepository.find({
@@ -193,7 +193,7 @@ export class TweetsService implements OnModuleDestroy{
     const hasMore = tweets.length > take;
     if (hasMore) tweets.splice(-1); 
 
-    const modifiedTweets = this._setTweetsMetadata(tweets, targetUserId);
+    const modifiedTweets = this._setTweetsMetadata(tweets, targetUsername);
 
     return {
       tweets: modifiedTweets, 
@@ -201,8 +201,8 @@ export class TweetsService implements OnModuleDestroy{
     }
   }
 
-  async getTweet(targetUserId: number, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
-    const user = await this.usersService.findUser(targetUserId);
+  async getTweet(targetUsername: string, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
+    const user = await this.usersService.findUser(targetUsername);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
     const tweet = await this.tweetsRepository.findOne({ 
@@ -216,23 +216,23 @@ export class TweetsService implements OnModuleDestroy{
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
 
     for (let i = 0; i < tweet.likes.length; i++) {
-      if (tweet.likes[i].user.id === targetUserId) {
+      if (tweet.likes[i].user.username === targetUsername) {
         tweet['liked'] = true;
         tweet['likeId'] = tweet.likes[i].id;
       }
     }
 
-    const tweets = await this.getTweetReplies(targetUserId, tweet.id, 0, take);
+    const tweets = await this.getTweetReplies(targetUsername, tweet.id, 0, take);
     const hasMore = tweets.length > take;
 
     return {
-      parentTweet: this._setTweetsMetadata([tweet], targetUserId)[0],
+      parentTweet: this._setTweetsMetadata([tweet], targetUsername)[0],
       tweets,
       hasMore
     }
   } 
 
-  async getTweetReplies(userId: number, tweetId: number, offset = 1, take = TWEET_PAGINATION_TAKE) {
+  async getTweetReplies(username: string, tweetId: number, offset = 1, take = TWEET_PAGINATION_TAKE) {
     const tweets = await this.tweetsRepository.find({
       where: {
         parent_tweet: { id: tweetId } 
@@ -249,10 +249,10 @@ export class TweetsService implements OnModuleDestroy{
     const hasMore = tweets.length > take;
     if (hasMore) tweets.splice(-1); 
 
-    return this._setTweetsMetadata(tweets, userId);
+    return this._setTweetsMetadata(tweets, username);
   }
 
-  _setTweetsMetadata(tweets: Array<Tweet>, userId: number) {
+  _setTweetsMetadata(tweets: Array<Tweet>, username: string) {
     const timestamp = new Date().getTime();
 
     return tweets.map(tweet => {
@@ -269,7 +269,7 @@ export class TweetsService implements OnModuleDestroy{
       tweet['liked'] = false;
 
       for (let i = 0; i < tweet.likes.length; i++) {
-        if (tweet.likes[i].user.id === userId) {
+        if (tweet.likes[i].user.username === username) {
           tweet['liked'] = true;
           tweet['likeId'] = tweet.likes[i].id;
         }

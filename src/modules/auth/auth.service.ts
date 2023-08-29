@@ -19,7 +19,10 @@ export class AuthService {
   constructor(private readonly configService: ConfigService, private readonly jwtService: JwtService) {}
 
   async register(body: RegisterDto): Promise<string> { 
-    const user = await this.userRepository.findOneBy({ email: body.email });
+    const user = await this.userRepository.findOne({
+      where: [{ email: body.email }, { username: body.username }]
+    });
+
     if (user) throw new BadRequestException(messageAccountAlreadyExists);
 
     const passwordHash = await bcrypt.hash(body.password, Number(this.configService.get<string>('SALT')));
@@ -92,6 +95,21 @@ export class AuthService {
     }); 
 
     return user;
+  }
+
+  async isUsernameAvailable(username: string): Promise<boolean> {
+    if (username.length > 16) throw new BadRequestException("Username length must be lower than 17 characters");
+
+    const user = await this.userRepository.findOne({
+      where: {
+        username
+      },
+      select: ['id']
+    });
+
+    return user 
+      ? false 
+      : true
   }
 
   _generateToken(payload: IJwtPayload): string {
