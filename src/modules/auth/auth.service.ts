@@ -10,13 +10,22 @@ import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from "./dto/login.dto";
 import { IJwtPayload } from "./interfaces/jwt.interface";
 import { oAuthDto } from "./dto/oauth.dto";
+import { HttpService } from "@nestjs/axios";
+// import { catchError, firstValueFrom } from "rxjs";
+// import { AxiosError } from "axios";
+import { StorageService } from "../media/services/storage.service";
 
 @Injectable()
 export class AuthService {
   @InjectRepository(User) 
   private readonly userRepository: Repository<User>;
 
-  constructor(private readonly configService: ConfigService, private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly configService: ConfigService, 
+    private readonly jwtService: JwtService,
+    // private readonly httpService: HttpService,
+    // private readonly storageService: StorageService
+  ) {}
 
   async register(body: RegisterDto): Promise<string> { 
     const user = await this.userRepository.findOne({
@@ -69,6 +78,22 @@ export class AuthService {
 
     const name = `${body.first_name} ${body.last_name}`;
     const username = 'oauthHardcodede';
+
+    // const { data } = await firstValueFrom(
+    //   this.httpService.get(body.avatar).pipe(
+    //     catchError((error: AxiosError) => {
+    //       console.log(error.response?.data);
+    //       throw 'An error happened!';
+    //     }),
+    //   ),
+    // );
+    //     console.log(body.avatar)
+    // const uploadFileInfo = this.storageService.getUploadFileInfo({ originalname: `${body.email}_${name}.png` } as any);
+    // const buffer = Buffer.from(data, 'binary');
+    // console.log("buffer", buffer)
+    // await this.storageService.uploadFileToS3Bucket({ buffer } as any, uploadFileInfo.filename);
+
+    // body.avatar = uploadFileInfo.filename;
 
     if (!user) {
       user = this.userRepository.create({

@@ -44,7 +44,7 @@ export class StorageService {
         Body: file.buffer
       })
     );
-
+      console.log('s3Respionse:', S3Response)
     if (S3Response.$metadata.httpStatusCode !== 200) throw new UnsupportedMediaTypeException();
   }
 }

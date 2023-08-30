@@ -47,7 +47,17 @@ export class UsersController {
     @Param() params: GetFollowersDto , 
     @Query() query: PaginationDto
   ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    console.log("sdfas")
     return this.usersService.getFollowers(user, params.targetUsername, query.offset, query.take);
+  }
+
+  @Get("/:targetUsername/followings")
+  async getFollowings(
+    @AuthUser() user: User, 
+    @Param() params: GetFollowersDto , 
+    @Query() query: PaginationDto
+  ): Promise<{ followings: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    return this.usersService.getFollowings(user, params.targetUsername, query.offset, query.take);
   }
 
   @Get("/:username")
