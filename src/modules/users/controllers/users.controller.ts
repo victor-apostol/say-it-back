@@ -23,6 +23,8 @@ import { imageMaxSizeInKb, videoMaxSizeInKb } from "@/modules/media/constants";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
 import { MultipleMediaValidator } from "@/modules/media/validators/multipleMedia.validator";
 import { SearchUsersDto } from "../dto/searchUsers.dto";
+import { PaginationDto } from "@/utils/global/pagination.dto";
+import { GetFollowersDto } from "../dto/getFollowers.dto";
 
 @UseGuards(JwtGuard)
 @Controller(usersPath)
@@ -37,6 +39,15 @@ export class UsersController {
   @Get("/search-users")
   async searchUsers(@Query() query: SearchUsersDto): Promise<Array<User>> {
     return await this.usersService.searchUsers(query.query, query.page, query.size);
+  }
+
+  @Get("/:targetUsername/followers")
+  async getFollowers(
+    @AuthUser() user: User, 
+    @Param() params: GetFollowersDto , 
+    @Query() query: PaginationDto
+  ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    return this.usersService.getFollowers(user, params.targetUsername, query.offset, query.take);
   }
 
   @Get("/:username")

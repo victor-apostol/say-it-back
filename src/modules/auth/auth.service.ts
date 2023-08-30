@@ -92,7 +92,7 @@ export class AuthService {
   async validateUser(id: number): Promise<Omit<User, 'password'> | null> {
     const user = await this.userRepository.findOne({ 
       where: { id }
-    }); 
+    }); // should do only needed selects
 
     return user;
   }
