@@ -237,6 +237,7 @@ export class UsersService implements OnModuleDestroy {
     offset = 0, 
     take = 50
   ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    console.log("")
     let followers = await this.userRepository.find({
       where: {
         following: { 
@@ -260,6 +261,8 @@ export class UsersService implements OnModuleDestroy {
       take: take + 1 
     }); // see query performance this and with id [following] 
 
+    console.log(followers)
+
     const hasMore = followers.length > take;
     if (hasMore) followers.splice(-1);
 
@@ -272,6 +275,53 @@ export class UsersService implements OnModuleDestroy {
 
     return {
       followers: followersWithMetadata,
+      hasMore,
+    };
+  }
+
+  async getFollowings(
+    authUser: User, 
+    targetUsername: string, 
+    offset = 0, 
+    take = 50
+  ): Promise<{ followings: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    let followings = await this.userRepository.find({
+      where: {
+        followed: { 
+          username: targetUsername 
+        }
+      },
+      relations: {
+        followed: true
+      },
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        name: true,
+        bio: true,
+        followed: {
+          username: true
+        }
+      },
+      skip: offset,
+      take: take + 1 
+    }); 
+
+    const hasMore = followings.length > take;
+    if (hasMore) followings.splice(-1);
+
+    const followingsWithMetadata = followings.map(follower => {
+      return {
+        ...follower,
+        amIfollowing: follower.followed.some(followerOfFollower => followerOfFollower.username === authUser.username)
+      } 
+    });
+
+    console.log(followingsWithMetadata)
+
+    return {
+      followings: followingsWithMetadata,
       hasMore,
     };
   }

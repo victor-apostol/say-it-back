@@ -8,12 +8,16 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { User } from "../users/entities/user.entity";
 import { UsersModule } from "../users/users.module";
 import { SseStrategy } from "./strategies/see.strategy";
+import { HttpModule } from "@nestjs/axios";
+import { MediaModule } from "../media/media.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync(jwtOptions),
     UsersModule,
+    HttpModule,
+    MediaModule
   ],
   providers: [
     AuthService, 
