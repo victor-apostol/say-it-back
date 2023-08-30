@@ -76,5 +76,6 @@ export class User {
 
     this.avatar = `https://${bucketName}.s3.amazonaws.com/${this.avatar}`;
     this.background = `https://${bucketName}.s3.amazonaws.com/${this.background}`;
+    // handle the google avatar images, they have full URL, maybe download them and upload to S3;
   }
 }

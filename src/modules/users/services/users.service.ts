@@ -4,16 +4,16 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { DataSource, Repository } from "typeorm";
 import { Subject } from "rxjs";
-import { User } from "../entities/user.entity";
+import { User } from "@/modules/users/entities/user.entity";
 import { Notification } from "@/modules/notifications/notification.entity";
 import { StorageService } from "@/modules/media/services/storage.service";
+import { SearchService } from "@/modules/elasticsearch/search.service";
 import { UpdateProfileDto } from "../dto/updateProfile.dto";
 import { messageUnableToUpdateProfile, messageUserNotFound } from "@/utils/global.constants";
 import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
 import { NotificationTypes } from "@/modules/notifications/types/notification.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
-import { SearchService } from "@/modules/elasticsearch/search.service";
 
 @Injectable()
 export class UsersService implements OnModuleDestroy {
@@ -22,7 +22,7 @@ export class UsersService implements OnModuleDestroy {
 
   @InjectRepository(Notification)
   private readonly notificationRepository: Repository<Notification>;
-  
+
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly dataSource: DataSource, 
@@ -229,6 +229,51 @@ export class UsersService implements OnModuleDestroy {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async getFollowers(
+    authUser: User, 
+    targetUsername: string, 
+    offset = 0, 
+    take = 50
+  ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
+    let followers = await this.userRepository.find({
+      where: {
+        following: { 
+          username: targetUsername 
+        }
+      },
+      relations: {
+        followed: true
+      },
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        name: true,
+        bio: true,
+        following: {
+          username: true
+        }
+      },
+      skip: offset,
+      take: take + 1 
+    }); // see query performance this and with id [following] 
+
+    const hasMore = followers.length > take;
+    if (hasMore) followers.splice(-1);
+
+    const followersWithMetadata = followers.map(follower => {
+      return {
+        ...follower,
+        amIfollowing: follower.followed.some(followerOfFollower => followerOfFollower.username === authUser.username)
+      } 
+    });
+
+    return {
+      followers: followersWithMetadata,
+      hasMore,
+    };
   }
 
   async searchUsers(query: string, page = 1, size = 10): Promise<Array<User>> {
