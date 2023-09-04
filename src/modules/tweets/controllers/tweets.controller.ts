@@ -1,4 +1,5 @@
 import { 
+  BadRequestException,
   Body, 
   Controller, 
   Get, 
@@ -23,13 +24,17 @@ import { MediaValidator } from "@/modules/media/validators/media.validator";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { AuthUser } from "src/utils/decorators/authUser.decorator";
-import { imageMaxSizeInKb, maxFilesCount, videoMaxSizeInKb } from "@/modules/media/constants";
+import { imageExtensionsWhitelist, imageMaxSizeInBytes, maxFilesCount, videoExtensionsWhitelist, videoMaxSizeInBytes } from "@/modules/media/constants";
 import { tweetsPath } from "../constants";
+import { StorageService } from "@/modules/media/services/storage.service";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
 export class TweetsController {
-  constructor(private readonly tweetsService: TweetsService) {}
+  constructor(
+    private readonly tweetsService: TweetsService,
+    private readonly storageService: StorageService
+  ) {}
 
   @Get('/feed')
   async getFeedTweets(
@@ -74,13 +79,20 @@ export class TweetsController {
         fileIsRequired: false,
         validators: [
           new MediaValidator({ 
-            imageMaxSize: imageMaxSizeInKb,
-            videoMaxSize: videoMaxSizeInKb
+            whitelist: [{
+              allowedExtensions: imageExtensionsWhitelist,
+              mimeTypeMaxAllowedSizeBytes: imageMaxSizeInBytes
+            },{
+              allowedExtensions: videoExtensionsWhitelist,
+              mimeTypeMaxAllowedSizeBytes: videoMaxSizeInBytes
+            }]
           })
         ],
       })
     ) files: Array<Express.Multer.File>
   ): Promise<{ tweet: Tweet, successMessage: string }> {
+    this.storageService.validateNumberOfDifferentMediaTypes(files);
+
     return await this.tweetsService.createTweet(authUser, body, files);
   }
 }

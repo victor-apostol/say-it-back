@@ -14,6 +14,7 @@ import { FollowNotificationEvent } from "@/modules/notifications/types/notificat
 import { NotificationTypes } from "@/modules/notifications/types/notification.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
+import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
 
 @Injectable()
 export class UsersService implements OnModuleDestroy {
@@ -77,10 +78,10 @@ export class UsersService implements OnModuleDestroy {
 
       await this.userRepository.save(userWithRelations);
 
-      const eventPayload = { 
+      const eventPayload: FollowNotificationEvent = { 
         event: NotificationTypes.FOLLOW, 
-        authUserId: authUser.id, 
-        eventTargetUserId: targetUser.id 
+        authUserUsername: authUser.username, 
+        eventTargetUsername: targetUser.username 
       }
 
       const newNotification = this.notificationRepository.create({
@@ -196,13 +197,13 @@ export class UsersService implements OnModuleDestroy {
       if (files.newAvatar) {
         const uploadFileInfo = this.storageService.getUploadFileInfo(files.newAvatar[0]);
         
-        await this.storageService.uploadFileToS3Bucket(files.newAvatar[0], uploadFileInfo.filename);
+        await this.storageService.uploadFileToS3Bucket(files.newAvatar[0], uploadFileInfo, MEDIA_TYPES_SIZES.AVATAR);
 
         restBody["avatar"] = uploadFileInfo.filename;
       } else if (files.newBackground) {
         const uploadFileInfo = this.storageService.getUploadFileInfo(files.newBackground[0]);
 
-        await this.storageService.uploadFileToS3Bucket(files.newBackground[0], uploadFileInfo.filename);
+        await this.storageService.uploadFileToS3Bucket(files.newBackground[0], uploadFileInfo, MEDIA_TYPES_SIZES.BACKGROUND);
 
         restBody["background"] = uploadFileInfo.filename;
       } else if (body.defaultBackground && authUser.background !== this.defaultBackgroundPath) {
@@ -237,7 +238,6 @@ export class UsersService implements OnModuleDestroy {
     offset = 0, 
     take = 50
   ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
-    console.log("")
     let followers = await this.userRepository.find({
       where: {
         following: { 
@@ -260,8 +260,6 @@ export class UsersService implements OnModuleDestroy {
       skip: offset,
       take: take + 1 
     }); // see query performance this and with id [following] 
-
-    console.log(followers)
 
     const hasMore = followers.length > take;
     if (hasMore) followers.splice(-1);
@@ -317,8 +315,6 @@ export class UsersService implements OnModuleDestroy {
         amIfollowing: follower.followed.some(followerOfFollower => followerOfFollower.username === authUser.username)
       } 
     });
-
-    console.log(followingsWithMetadata)
 
     return {
       followings: followingsWithMetadata,

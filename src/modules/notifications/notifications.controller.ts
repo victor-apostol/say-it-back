@@ -23,6 +23,6 @@ export class NotificationsController {
   @UseGuards(SseGuard)
   @Sse('sse')
   async handleUserNotificationSession(@AuthUser() user: User) {
-    return this.notificationsService.getSseObservable(user.id);
+    return this.notificationsService.getSseObservable(user.username);
   }
 }

@@ -2,19 +2,19 @@ import { NotificationTypes } from "./notification.types"
 
 export type FollowNotificationEvent = {
   event: NotificationTypes;
-  authUserId: number;
-  eventTargetUserId: number; 
+  authUserUsername: string;
+  eventTargetUsername: string; 
 } | string;
 
 export type TweetLikeEvent = {
   event: NotificationTypes, 
-  authUserId: number;
+  authUserUsername: string;
   tweetId: number;
-  eventTargetUserId: number;
+  eventTargetUsername: string;
 } | string;
 
 export type TweetReplySubject = {
   event: NotificationTypes; 
-  authUserId: number;
-  eventTargetUserId: number;
+  authUserUsername: string;
+  eventTargetUsername: string;
 } | string;

@@ -82,13 +82,13 @@ export class NotificationsService implements OnModuleDestroy{
     }
   }
 
-  getSseObservable(userId: number) {
+  getSseObservable(targetUsername: string) {
     return this.sseSubject$.asObservable().pipe(
       takeWhile(() => true),
       filter((eventData) => { 
         const parsedEventData = JSON.parse(eventData) as Exclude<FollowNotificationEvent | TweetLikeEvent | TweetReplySubject, string>;
         
-        return parsedEventData.eventTargetUserId === userId;
+        return parsedEventData.eventTargetUsername === targetUsername;
       })
     )
   }

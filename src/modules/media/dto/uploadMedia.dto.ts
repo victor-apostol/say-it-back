@@ -1,10 +1,10 @@
 import { IsEnum, IsNumberString} from "class-validator";
-import { MediaTypes } from "../constants";
+import { MEDIA_TYPES } from "../constants";
 
 export class UploadMediaDto {
   @IsNumberString()
   tweetId: number;
   
-  @IsEnum(MediaTypes)
-  media_type: MediaTypes;
+  @IsEnum(MEDIA_TYPES)
+  media_type: MEDIA_TYPES;
 }

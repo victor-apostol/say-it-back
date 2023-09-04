@@ -12,6 +12,7 @@ import { NotificationTypes } from "@/modules/notifications/types/notification.ty
 import { TweetLikeEvent } from "@/modules/notifications/types/notification_events.types";
 import { messageTweetIsAlreadyLiked } from "../constants";
 import { messageTweetNotFound } from "@/utils/global.constants";
+import { User } from "@/modules/users/entities/user.entity";
 
 @Injectable()
 export class LikesService {
@@ -31,13 +32,23 @@ export class LikesService {
     
   private readonly likesSubject$ = new Subject<TweetLikeEvent | string>()
   
-  async createLike(authUser: IJwtPayload, body: CreateLikeDto): Promise<any | BadRequestException> { 
-    const queryRunner = this.dataSource.createQueryRunner();
+  async createLike(authUser: User, body: CreateLikeDto): Promise<Tweet & { likeId: number }> { 
+    const queryRunner = this.dataSource.createQueryRunner(); 
 
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const isTweetLiked = await this.likeRepository.findOne({ 
+        where: {  
+          user: { id: authUser.id },
+          tweet: { id: body.tweetId }          
+        },
+        select: ['id']
+      });
+
+      if (isTweetLiked) throw new BadRequestException(messageTweetIsAlreadyLiked);
+
       const tweet = await this.tweetRepository.findOne({ 
         where: {
           id: body.tweetId 
@@ -50,16 +61,7 @@ export class LikesService {
         }
       });
       if (!tweet) throw new BadRequestException(messageTweetNotFound);
-  
-      const isTweetLiked = await this.likeRepository.findOne({ 
-        where: {  
-          user: authUser,
-          tweet: { id: tweet.id }          
-        }
-      });
-  
-      if (isTweetLiked) throw new BadRequestException(messageTweetIsAlreadyLiked);
-  
+      
       const likeObject = queryRunner.manager.create(Like, {
         user: authUser,
         tweet
@@ -72,11 +74,11 @@ export class LikesService {
 
       await queryRunner.commitTransaction(); 
 
-      const eventPayload = { 
+      const eventPayload: TweetLikeEvent = { 
         event: NotificationTypes.LIKE, 
         tweetId: tweet.id,
-        authUserId: authUser.id, 
-        eventTargetUserId: tweet.user.id 
+        authUserUsername: authUser.username, 
+        eventTargetUsername: tweet.user.username 
       }
 
       const newNotification = this.notificationsRepository.create({
@@ -102,7 +104,7 @@ export class LikesService {
     }
   }
 
-  async deleteLike(authUser: IJwtPayload, likeId: number, tweetId: number): Promise<{ success: boolean }> {
+  async deleteLike(authUser: User, likeId: number, tweetId: number): Promise<{ success: boolean }> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
