@@ -8,6 +8,7 @@ export const tweetPropertiesSelect = {
       id: true,
       user: {
         id: true,
+        username: true
       }
     }
   },

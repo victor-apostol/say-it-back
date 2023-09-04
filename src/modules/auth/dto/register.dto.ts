@@ -1,3 +1,4 @@
+import { Transform } from "class-transformer";
 import { IsEmail, IsString, Length, MaxLength } from "class-validator";
 
 export class RegisterDto {
@@ -10,6 +11,7 @@ export class RegisterDto {
   username: string;
 
   @IsEmail()
+  @Transform(({ value }) => value.toLowerCase())
   @MaxLength(128)
   email: string;
 

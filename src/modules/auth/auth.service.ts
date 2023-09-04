@@ -87,7 +87,7 @@ export class AuthService {
     //     }),
     //   ),
     // );
-    //     console.log(body.avatar)
+
     // const uploadFileInfo = this.storageService.getUploadFileInfo({ originalname: `${body.email}_${name}.png` } as any);
     // const buffer = Buffer.from(data, 'binary');
     // console.log("buffer", buffer)
@@ -117,7 +117,7 @@ export class AuthService {
   async validateUser(id: number): Promise<Omit<User, 'password'> | null> {
     const user = await this.userRepository.findOne({ 
       where: { id }
-    }); // should do only needed selects
+    }); 
 
     return user;
   }

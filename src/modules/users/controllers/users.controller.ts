@@ -19,7 +19,7 @@ import { ActionsDto, FriendshipDto } from "../dto/friendship.dto";
 import { User } from "../entities/user.entity";
 import { UpdateProfileDto } from "../dto/updateProfile.dto";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
-import { imageMaxSizeInKb, videoMaxSizeInKb } from "@/modules/media/constants";
+import { imageExtensionsWhitelist, imageMaxSizeInBytes, videoExtensionsWhitelist, videoMaxSizeInBytes } from "@/modules/media/constants";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
 import { MultipleMediaValidator } from "@/modules/media/validators/multipleMedia.validator";
 import { SearchUsersDto } from "../dto/searchUsers.dto";
@@ -47,7 +47,6 @@ export class UsersController {
     @Param() params: GetFollowersDto , 
     @Query() query: PaginationDto
   ): Promise<{ followers: Array<Omit<User, "appendS3BucketName"> & { amIfollowing: boolean }>, hasMore: boolean }> {
-    console.log("sdfas")
     return this.usersService.getFollowers(user, params.targetUsername, query.offset, query.take);
   }
 
@@ -88,8 +87,10 @@ export class UsersController {
         fileIsRequired: false,
         validators: [
           new MultipleMediaValidator({ 
-            imageMaxSize: imageMaxSizeInKb,
-            videoMaxSize: videoMaxSizeInKb
+            whitelist: [{
+              allowedExtensions: imageExtensionsWhitelist,
+              mimeTypeMaxAllowedSizeBytes: imageMaxSizeInBytes
+            }]
           })
         ],
       })

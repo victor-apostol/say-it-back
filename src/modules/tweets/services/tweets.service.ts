@@ -20,7 +20,7 @@ import { NotificationTypes } from "@/modules/notifications/types/notification.ty
 import { TweetReplySubject } from "@/modules/notifications/types/notification_events.types";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
-import { MediaTypes } from "@/modules/media/constants";
+import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageParentTweetDoesNotExist, 
@@ -51,7 +51,6 @@ export class TweetsService implements OnModuleDestroy{
     authUser: User, 
     body: CreateTweetDto, 
     files: Array<Express.Multer.File>,
-    media_type = MediaTypes.IMAGE
   ): Promise<{ tweet: Tweet, successMessage: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
@@ -95,11 +94,11 @@ export class TweetsService implements OnModuleDestroy{
               uploadFileInfo.filename, 
               authUser, 
               tweet.id, 
-              media_type, 
+              uploadFileInfo.mediaType, 
               queryRunner
             );
 
-            await this.storageService.uploadFileToS3Bucket(file, uploadFileInfo.filename);
+            await this.storageService.uploadFileToS3Bucket(file, uploadFileInfo, MEDIA_TYPES_SIZES.MEDIA);
 
             media.push(mediaEntity);
           })
@@ -109,10 +108,10 @@ export class TweetsService implements OnModuleDestroy{
       await queryRunner.commitTransaction();
 
       if (body.parent_id && parent_tweet) {
-        const eventPayload = { 
+        const eventPayload: TweetReplySubject = { 
           event: NotificationTypes.REPLY, 
-          authUserId: authUser.id,
-          eventTargetUserId: parent_tweet.user.id 
+          authUserUsername: authUser.username,
+          eventTargetUsername: parent_tweet.user.username 
         } 
         
         const newNotification = this.notificationsRepository.create({
@@ -136,6 +135,7 @@ export class TweetsService implements OnModuleDestroy{
         successMessage: "Your tweet was sent",
       }
     } catch(err) {
+      console.log(err)
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
     } finally {
@@ -154,7 +154,7 @@ export class TweetsService implements OnModuleDestroy{
       .innerJoin("user.followed", "followed")
       .where("followed.id = :id", { id: authUser.id })
       .andWhere("tweet.parent_tweet IS NULL")
-      .addSelect(['user_likes.id'])
+      .addSelect(['user_likes.id', 'user_likes.username'])
       .skip(offset)
       .take(take + 1)
       // .orderBy('RANDOM()')
@@ -163,7 +163,7 @@ export class TweetsService implements OnModuleDestroy{
 
     const hasMore = followingListTweets.length > take;
     if (hasMore) followingListTweets.splice(-1); 
-   
+
     const addTweetsMetadata = this._setTweetsMetadata(followingListTweets, authUser.username);
 
     return {
@@ -212,15 +212,8 @@ export class TweetsService implements OnModuleDestroy{
       relations: ['media', 'user', 'likes', 'likes.user'],
       ...tweetPropertiesSelect,
     });
-
+    
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
-
-    for (let i = 0; i < tweet.likes.length; i++) {
-      if (tweet.likes[i].user.username === targetUsername) {
-        tweet['liked'] = true;
-        tweet['likeId'] = tweet.likes[i].id;
-      }
-    }
 
     const tweets = await this.getTweetReplies(targetUsername, tweet.id, 0, take);
     const hasMore = tweets.length > take;

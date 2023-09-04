@@ -1,7 +1,7 @@
 import { AfterLoad, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 import { User } from "src/modules/users/entities/user.entity";
-import { MediaTypes } from "@/modules/media/constants";
+import { MEDIA_TYPES } from "@/modules/media/constants";
 
 @Entity('media')
 export class Media {
@@ -11,8 +11,8 @@ export class Media {
   @Column({ type: 'varchar', length: 255 })
   path: string;
 
-  @Column({ type: 'enum', enum: MediaTypes })
-  media_type: MediaTypes;
+  @Column({ type: 'enum', enum: MEDIA_TYPES })
+  media_type: MEDIA_TYPES;
 
   @ManyToOne(() => User, (user) => user.id)
   user: User;
