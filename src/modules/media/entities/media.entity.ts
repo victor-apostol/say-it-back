@@ -17,7 +17,7 @@ export class Media {
   @ManyToOne(() => User, (user) => user.id)
   user: User;
 
-  @ManyToOne(() => Tweet, (tweet) => tweet.id)
+  @ManyToOne(() => Tweet, (tweet) => tweet.id, { onDelete: "CASCADE" })
   tweet: Tweet;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

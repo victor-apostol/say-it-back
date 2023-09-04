@@ -20,16 +20,16 @@ export class Tweet {
   @Column({ type: 'integer', default: 0})
   views: number;
   
-  @OneToMany(() => Like, (like) => like.tweet)
+  @OneToMany(() => Like, (like) => like.tweet, { cascade: true })
   likes: Like[];
   
-  @OneToMany(() => Media, (media) => media.tweet)
+  @OneToMany(() => Media, (media) => media.tweet, { cascade: true })
   media: Media[];
   
   @ManyToOne(() => User, (user) => user.id)
   user: User;
-  
-  @ManyToOne(() => Tweet, (tweet) => tweet.id)
+
+  @ManyToOne(() => Tweet, (tweet) => tweet.id, { onDelete: "CASCADE", cascade: true }) 
   @JoinColumn()
   parent_tweet: Tweet;
 

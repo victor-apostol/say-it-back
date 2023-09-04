@@ -56,7 +56,8 @@ export class StorageService {
   async uploadFileToS3Bucket(file: Express.Multer.File, uploadFileInfo: UploadFileInfo, fileType: MEDIA_TYPES_SIZES) {
     const compressedBuffer = uploadFileInfo.mediaType === MEDIA_TYPES.IMAGE 
       ? await this.mediaService.compressImage(file.buffer, uploadFileInfo.fileExtension, fileType)
-      : await this.mediaService.compressVideo({ buffer: file.buffer });
+      // : await this.mediaService.compressVideo({ buffer: file.buffer });
+      : ''
 
     const S3Response = await this.S3client.send(
       new PutObjectCommand({

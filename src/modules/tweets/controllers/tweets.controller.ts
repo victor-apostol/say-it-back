@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body, 
   Controller, 
+  Delete, 
   Get, 
   Param, 
   ParseFilePipe, 
@@ -16,6 +17,7 @@ import { FilesInterceptor } from "@nestjs/platform-express";
 
 import { JwtGuard } from "src/modules/auth/guards/auth.guard";
 import { TweetsService } from "../services/tweets.service";
+import { StorageService } from "@/modules/media/services/storage.service";
 import { Tweet } from "../entities/tweet.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
@@ -26,7 +28,6 @@ import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { AuthUser } from "src/utils/decorators/authUser.decorator";
 import { imageExtensionsWhitelist, imageMaxSizeInBytes, maxFilesCount, videoExtensionsWhitelist, videoMaxSizeInBytes } from "@/modules/media/constants";
 import { tweetsPath } from "../constants";
-import { StorageService } from "@/modules/media/services/storage.service";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
@@ -94,5 +95,10 @@ export class TweetsController {
     this.storageService.validateNumberOfDifferentMediaTypes(files);
 
     return await this.tweetsService.createTweet(authUser, body, files);
+  }
+
+  @Delete('/:tweetId')
+  async deleteTweet(@AuthUser() user: User, @Param('tweetId', ParseIntPipe) tweetId: number): Promise<void> {
+    return this.tweetsService.deleteTweet(user, tweetId);
   }
 }

@@ -1,4 +1,4 @@
-import { AfterRemove, Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { User } from "@/modules/users/entities/user.entity";
 
@@ -7,7 +7,7 @@ export class Like {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Tweet, (tweet) => tweet.likes)
+  @ManyToOne(() => Tweet, (tweet) => tweet.likes, { onDelete: "CASCADE" })
   tweet: Tweet;
 
   @ManyToOne(() => User, (user) => user.id) 
