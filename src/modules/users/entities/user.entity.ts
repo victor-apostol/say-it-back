@@ -14,6 +14,7 @@ config();
 
 const defaultBackgroundUrl = process.env.DEFAULT_BACKGROUND_IMAGE;
 const defaultAvatarUrl = process.env.DEFAULT_AVATAR_IMAGE;
+const bucketName = process.env.AWS_S3_BUCKET;
 
 @Entity('users')
 export class User {
@@ -22,8 +23,8 @@ export class User {
 
   @Column({ type: 'varchar', length: 32 })
   name: string;
-  
-  @Column({ type: 'varchar', length: 16, unique: true })
+  // delete nullable
+  @Column({ type: 'varchar', length: 16, unique: true, nullable: true })
   username: string;
 
   @Column({ type: 'varchar', length: 120, default: "" })
@@ -72,8 +73,6 @@ export class User {
 
   @AfterLoad()
   appendS3BucketName() {
-    const bucketName = process.env.AWS_S3_BUCKET;
-
     this.avatar = `https://${bucketName}.s3.amazonaws.com/${this.avatar}`;
     this.background = `https://${bucketName}.s3.amazonaws.com/${this.background}`;
     // handle the google avatar images, they have full URL, maybe download them and upload to S3;

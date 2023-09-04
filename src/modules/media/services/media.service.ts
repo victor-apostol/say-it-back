@@ -71,49 +71,49 @@ export class MediaService {
     }
   }
 
-  async compressVideo(payload: { buffer: Buffer }): Promise<Buffer> {
-    // process.on("message", async () => {  
-      let compressedBuffer: Buffer = Buffer.alloc(0);
+  // async compressVideo(payload: { buffer: Buffer }): Promise<Buffer> {
+  //   // process.on("message", async () => {  
+  //     let compressedBuffer: Buffer = Buffer.alloc(0);
       
-      const { buffer } = payload;
-      const timestamp = Date.now();
+  //     const { buffer } = payload;
+  //     const timestamp = Date.now();
       
-      console.log("initial buffer", buffer)
-      const readable = new Readable();
-      readable._read = () => {}; 
+  //     console.log("initial buffer", buffer)
+  //     const readable = new Readable();
+  //     readable._read = () => {}; 
     
-      readable.push(buffer);
-      readable.push(null);
+  //     readable.push(buffer);
+  //     readable.push(null);
 
-      const ws = new Writable();
-      ws._write = ws.write;
+  //     const ws = new Writable();
+  //     ws._write = ws.write;
 
-      const k = await new Promise<Buffer>((resolve, reject) => {
-        const ffmpegCommand = ffmpeg()
-          .input(readable)
-          .inputFormat('mp4') 
-          .videoCodec('libx264') 
-          .audioCodec('aac') 
-          .outputOptions(['-crf 28'])
-          .fps(30)  
+  //     const k = await new Promise<Buffer>((resolve, reject) => {
+  //       const ffmpegCommand = ffmpeg()
+  //         .input(readable)
+  //         .inputFormat('mp4') 
+  //         .videoCodec('libx264') 
+  //         .audioCodec('aac') 
+  //         .outputOptions(['-crf 28'])
+  //         .fps(30)  
 
-      ffmpegCommand
-        .on('data', (chunk) => {
-          console.log("chunk", chunk)
-          compressedBuffer = Buffer.concat([compressedBuffer, chunk]);
-        })
-        .on('end', () => {
-          resolve(compressedBuffer);
-        })
-        .on('error', (err) => {
-          reject(err);
-        });
+  //     ffmpegCommand
+  //       .on('data', (chunk) => {
+  //         console.log("chunk", chunk)
+  //         compressedBuffer = Buffer.concat([compressedBuffer, chunk]);
+  //       })
+  //       .on('end', () => {
+  //         resolve(compressedBuffer);
+  //       })
+  //       .on('error', (err) => {
+  //         reject(err);
+  //       });
   
-      console.log("DONE ???? STREAM:", compressedBuffer)
+  //     console.log("DONE ???? STREAM:", compressedBuffer)
 
-      ffmpegCommand.pipe(ws);
-    })
-    console.log(k);
-    return compressedBuffer;
-  }
+  //     ffmpegCommand.pipe(ws);
+  //   })
+  //   console.log(k);
+  //   return compressedBuffer;
+  // }
 }

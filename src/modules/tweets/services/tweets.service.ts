@@ -272,6 +272,15 @@ export class TweetsService implements OnModuleDestroy{
     });
   }
 
+  async deleteTweet(authUser: User, tweetId: number): Promise<void> {
+    const result = await this.tweetsRepository.delete({
+      id: tweetId,
+      user: { id: authUser.id }
+    });
+
+    if (result.affected == 0) throw new BadRequestException("Could not delete this tweet, unable to find tweet or you're not the owner");
+  }
+
   tweetsRepliesObservable() {
     return this.tweetRepliesSubject$.asObservable();
   }

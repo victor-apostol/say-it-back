@@ -17,7 +17,7 @@ export class Notification {
   @Column({ type: 'date', default: () => 'CURRENT_TIMESTAMP' })
   created_at: string;
 
-  @ManyToOne(() => Tweet)
+  @ManyToOne(() => Tweet, { onDelete: "CASCADE" })
   tweet: Tweet;
 
   @ManyToOne(() => User)
