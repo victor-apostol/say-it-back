@@ -9,10 +9,11 @@ import { User } from "../users/entities/user.entity";
 import { Notification } from "./notification.entity";
 import { NOTIFICATIONS_PAGINATION_TAKE } from "../tweets/constants";
 import { 
-  FollowNotificationEvent, 
-  TweetLikeEvent, 
+  FollowNotificationSubject, 
+  TweetLikeSubject, 
   TweetReplySubject 
 } from "./types/notification_events.types";
+import { NOTIFICATION_TYPES } from "./types/notification.types";
 
 @Injectable()
 export class NotificationsService implements OnModuleDestroy{
@@ -30,6 +31,7 @@ export class NotificationsService implements OnModuleDestroy{
     this.handleFriendshipFollowEvent();
     this.handleTweetLikesEvents();
     this.handleTweetRepliesEvents();
+    this.handleTweetViewsEvents();
   }
 
   private sseSubject$ = new Subject<string>()
@@ -51,6 +53,13 @@ export class NotificationsService implements OnModuleDestroy{
       this.sseSubject$.next(eventData as string);
     });
   }
+
+  private handleTweetViewsEvents() {
+    this.tweetsService.tweetsViewsObservable().subscribe((eventData) => {
+      this.sseSubject$.next(eventData as string);
+    });
+  }
+
 
   async userNotifications(
     authUser: User, 
@@ -86,11 +95,13 @@ export class NotificationsService implements OnModuleDestroy{
     return this.sseSubject$.asObservable().pipe(
       takeWhile(() => true),
       filter((eventData) => { 
-        const parsedEventData = JSON.parse(eventData) as Exclude<FollowNotificationEvent | TweetLikeEvent | TweetReplySubject, string>;
+        const parsedEventData = JSON.parse(eventData) as Exclude<FollowNotificationSubject | TweetLikeSubject | TweetReplySubject | FollowNotificationSubject, string>;
+
+        if (parsedEventData.event === NOTIFICATION_TYPES.VIEW) return true;
         
         return parsedEventData.eventTargetUsername === targetUsername;
       })
-    )
+    );
   }
 
   onModuleDestroy() {

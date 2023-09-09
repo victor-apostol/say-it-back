@@ -1,19 +1,20 @@
 import { ConfigService } from "@nestjs/config";
 import { JwtModuleAsyncOptions } from "@nestjs/jwt";
 import { TypeOrmModuleAsyncOptions } from "@nestjs/typeorm";
+import { ElasticsearchModuleAsyncOptions } from "@nestjs/elasticsearch";
 import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions";
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "src/modules/tweets/entities/tweet.entity";
 import { Media } from "src/modules/media/entities/media.entity";
 import { Notification } from "@/modules/notifications/notification.entity";
+import { TweetsViews } from "@/modules/tweets/entities/tweetsViews.entity";
 //import { LikeEventSubscriber } from "@/modules/likes/entities/like.event.subscriber";
 import * as Joi from 'joi';
 import { RedisAsyncModuleOptions } from "@/modules/redis/redis.types";
-import { ElasticsearchModuleAsyncOptions } from "@nestjs/elasticsearch";
 
 export const entitiesToLoad = [
-  User, Tweet, Media, Like, Notification
+  User, Tweet, Media, Like, Notification, TweetsViews
 ]
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {

@@ -3,16 +3,16 @@ import { OnEvent } from "@nestjs/event-emitter";
 import { IORedisKey } from "../redis/redis.types";
 import { Redis } from "ioredis";
 import { Subject } from "rxjs";
-import { TweetLikeEvent, TweetReplySubject } from "./types/notification_events.types";
+import { FollowNotificationSubject, TweetLikeSubject, TweetReplySubject, TweetViewSubject } from "./types/notification_events.types";
 import { Repository } from "typeorm";
 import { Like } from "../likes/entities/like.entity";
 import { Tweet } from "../tweets/entities/tweet.entity";
 import { User } from "../users/entities/user.entity";
-import { NotificationTypes } from "./types/notification.types";
+import { NOTIFICATION_TYPES } from "./types/notification.types";
 
 type ListenerPayload = {
-  eventPayload: Exclude<TweetLikeEvent | TweetReplySubject | TweetLikeEvent, string>, 
-  subject$: Subject<TweetLikeEvent | TweetReplySubject | TweetLikeEvent>,
+  eventPayload: Exclude<TweetLikeSubject | TweetReplySubject | FollowNotificationSubject | TweetViewSubject, string>, 
+  subject$: Subject<TweetLikeSubject | TweetReplySubject | TweetViewSubject | FollowNotificationSubject>,
   repository: Repository<Like | Tweet | User>,
   entity: Like | Tweet | User 
 }
@@ -26,13 +26,13 @@ export class NotificationsEventsService {
   async newNotification({ eventPayload, subject$, repository, entity }: ListenerPayload) {
     const stringifiedPayload = JSON.stringify(eventPayload);
 
-    if (eventPayload.event === NotificationTypes.REPLY) {
+    if (eventPayload.event === NOTIFICATION_TYPES.REPLY) {
       await repository.save(entity);
 
-      subject$.next(stringifiedPayload);
-
-      return;
-    }
+      return subject$.next(stringifiedPayload);
+    } else if (eventPayload.event === NOTIFICATION_TYPES.VIEW) {
+      return subject$.next(stringifiedPayload);
+    } //cache it here maybe even ???
 
     const isCached = await this.redisClient.get(stringifiedPayload);
 

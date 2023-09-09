@@ -1,5 +1,6 @@
-export enum NotificationTypes {
+export enum NOTIFICATION_TYPES {
   LIKE = 'like',
   REPLY = 'reply',
-  FOLLOW = 'follow'
+  FOLLOW = 'follow',
+  VIEW = 'view'
 }

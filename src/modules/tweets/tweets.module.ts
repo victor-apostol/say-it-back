@@ -8,6 +8,7 @@ import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { Media } from "@/modules/media/entities/media.entity";
 import { Notification } from "@/modules/notifications/notification.entity";
+import { TweetsViews } from "@/modules/tweets/entities/tweetsViews.entity";
 
 import { TweetsController } from "@/modules/tweets/controllers/tweets.controller";
 import { TweetsService } from "@/modules/tweets/services/tweets.service";
@@ -16,7 +17,7 @@ import { MediaService } from "@/modules/media/services/media.service";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Tweet, Like, Media, Notification]),
+    TypeOrmModule.forFeature([Tweet, Like, Media, Notification, TweetsViews]),
     UsersModule,
     MediaModule,
   ],

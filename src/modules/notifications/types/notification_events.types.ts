@@ -1,20 +1,12 @@
-import { NotificationTypes } from "./notification.types"
+import { NOTIFICATION_TYPES } from "./notification.types";
 
-export type FollowNotificationEvent = {
-  event: NotificationTypes;
-  authUserUsername: string;
-  eventTargetUsername: string; 
-} | string;
-
-export type TweetLikeEvent = {
-  event: NotificationTypes, 
-  authUserUsername: string;
-  tweetId: number;
-  eventTargetUsername: string;
-} | string;
-
-export type TweetReplySubject = {
-  event: NotificationTypes; 
+type TweetSubjectBase = {
+  event: NOTIFICATION_TYPES;
   authUserUsername: string;
   eventTargetUsername: string;
-} | string;
+};
+
+export type FollowNotificationSubject = TweetSubjectBase | string;
+export type TweetLikeSubject = TweetSubjectBase & { tweetId: number } | string;
+export type TweetReplySubject = TweetSubjectBase & { tweetId: number } | string;
+export type TweetViewSubject = TweetSubjectBase & { tweetId: number } | string;
