@@ -7,9 +7,8 @@ import { Notification } from "@/modules/notifications/notification.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Tweet } from "@/modules/tweets/entities/tweet.entity";
 import { CreateLikeDto } from "@/modules/likes/dto/create.dto";
-import { IJwtPayload } from "@/modules/auth/interfaces/jwt.interface";
-import { NotificationTypes } from "@/modules/notifications/types/notification.types";
-import { TweetLikeEvent } from "@/modules/notifications/types/notification_events.types";
+import { NOTIFICATION_TYPES } from "@/modules/notifications/types/notification.types";
+import { TweetLikeSubject } from "@/modules/notifications/types/notification_events.types";
 import { messageTweetIsAlreadyLiked } from "../constants";
 import { messageTweetNotFound } from "@/utils/global.constants";
 import { User } from "@/modules/users/entities/user.entity";
@@ -30,7 +29,7 @@ export class LikesService {
     private readonly eventEmitter: EventEmitter2
   ) {}
     
-  private readonly likesSubject$ = new Subject<TweetLikeEvent | string>()
+  private readonly likesSubject$ = new Subject<TweetLikeSubject | string>()
   
   async createLike(authUser: User, body: CreateLikeDto): Promise<Tweet & { likeId: number }> { 
     const queryRunner = this.dataSource.createQueryRunner(); 
@@ -56,7 +55,8 @@ export class LikesService {
         relations: { user: true },
         select: {
           user: {
-            id: true
+            id: true,
+            username: true
           }
         }
       });
@@ -74,26 +74,28 @@ export class LikesService {
 
       await queryRunner.commitTransaction(); 
 
-      const eventPayload: TweetLikeEvent = { 
-        event: NotificationTypes.LIKE, 
-        tweetId: tweet.id,
-        authUserUsername: authUser.username, 
-        eventTargetUsername: tweet.user.username 
+      if (authUser.username !== tweet.user.username) {
+        const eventPayload: TweetLikeSubject = { 
+          event: NOTIFICATION_TYPES.LIKE, 
+          tweetId: tweet.id,
+          authUserUsername: authUser.username, 
+          eventTargetUsername: tweet.user.username 
+        }
+
+        const newNotification = this.notificationsRepository.create({
+          type: NOTIFICATION_TYPES.LIKE,
+          action_user: { id: authUser.id },
+          target_user: { id: tweet.user.id },
+          tweet: { id: tweet.id }
+        });
+
+        this.eventEmitter.emit('new.notification', { 
+          eventPayload, 
+          subject$: this.likesSubject$, 
+          repository: this.notificationsRepository,
+          entity: newNotification
+        });
       }
-
-      const newNotification = this.notificationsRepository.create({
-        type: NotificationTypes.LIKE,
-        action_user: { id: authUser.id },
-        target_user: { id: tweet.user.id },
-        tweet: { id: tweet.id }
-      });
-
-      this.eventEmitter.emit('new.notification', { 
-        eventPayload, 
-        subject$: this.likesSubject$, 
-        repository: this.notificationsRepository,
-        entity: newNotification
-      });
     
       return { ...tweet, likeId: like.id }
     } catch(err) {

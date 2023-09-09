@@ -10,8 +10,8 @@ import { StorageService } from "@/modules/media/services/storage.service";
 import { SearchService } from "@/modules/elasticsearch/search.service";
 import { UpdateProfileDto } from "../dto/updateProfile.dto";
 import { messageUnableToUpdateProfile, messageUserNotFound } from "@/utils/global.constants";
-import { FollowNotificationEvent } from "@/modules/notifications/types/notification_events.types";
-import { NotificationTypes } from "@/modules/notifications/types/notification.types";
+import { FollowNotificationSubject } from "@/modules/notifications/types/notification_events.types";
+import { NOTIFICATION_TYPES } from "@/modules/notifications/types/notification.types";
 import { FriendshipActions } from "../interfaces/friendship.interface";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
 import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
@@ -32,7 +32,7 @@ export class UsersService implements OnModuleDestroy {
     private readonly searchService: SearchService
   ) {}
 
-  private readonly friendshipAction$ = new Subject<FollowNotificationEvent>();
+  private readonly friendshipAction$ = new Subject<FollowNotificationSubject>();
 
   private readonly s3Host = `https://${this.cfgService.get("AWS_S3_BUCKET")}.s3.amazonaws.com`;
   private readonly defaultBackgroundFilename = this.cfgService.get("DEFAULT_BACKGROUND_IMAGE");
@@ -78,14 +78,14 @@ export class UsersService implements OnModuleDestroy {
 
       await this.userRepository.save(userWithRelations);
 
-      const eventPayload: FollowNotificationEvent = { 
-        event: NotificationTypes.FOLLOW, 
+      const eventPayload: FollowNotificationSubject = { 
+        event: NOTIFICATION_TYPES.FOLLOW, 
         authUserUsername: authUser.username, 
         eventTargetUsername: targetUser.username 
       }
 
       const newNotification = this.notificationRepository.create({
-        type: NotificationTypes.FOLLOW,
+        type: NOTIFICATION_TYPES.FOLLOW,
         action_user: { id: authUser.id },
         target_user: { id: targetUser.id }
       })

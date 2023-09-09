@@ -55,10 +55,11 @@ export class TweetsController {
 
   @Get('/user/:username/:tweetId') 
   async getTweet( 
+    @AuthUser() user: User,
     @Param('username') targetUsername: string, 
     @Param('tweetId', ParseIntPipe) tweetId: number
   ): Promise<ITweetResponse> { 
-    return await this.tweetsService.getTweet(targetUsername, tweetId);
+    return await this.tweetsService.getTweet(user, targetUsername, tweetId);
   } 
   
   @Get('/replies/:tweetId')
@@ -68,6 +69,11 @@ export class TweetsController {
     @Query() query: PaginationDto
   ): Promise<{ tweets: Array<Tweet> }>  { 
     return { tweets: await this.tweetsService.getTweetReplies(user.username, tweetId, query.offset, query.take) }
+  }
+
+  @Post('/view')
+  async viewTweet(@AuthUser() user: User, @Body('tweetId', ParseIntPipe) tweetId: number): Promise<void> {
+    return await this.tweetsService.viewTweet(user, tweetId);
   }
 
   @Post('')

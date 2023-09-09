@@ -18,7 +18,7 @@ export class Tweet {
   replies_count: number;
 
   @Column({ type: 'integer', default: 0})
-  views: number;
+  views_count: number;
   
   @OneToMany(() => Like, (like) => like.tweet, { cascade: true })
   likes: Like[];

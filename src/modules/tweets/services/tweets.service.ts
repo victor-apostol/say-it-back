@@ -12,12 +12,13 @@ import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { Tweet } from "../entities/tweet.entity";
 import { Media } from "@/modules/media/entities/media.entity";
+import { TweetsViews } from "../entities/tweetsViews.entity";
 import { UsersService } from "@/modules/users/services/users.service";
 import { MediaService } from "@/modules/media/services/media.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { CreateTweetDto } from "../dto/createTweet.dto";
-import { NotificationTypes } from "@/modules/notifications/types/notification.types";
-import { TweetReplySubject } from "@/modules/notifications/types/notification_events.types";
+import { NOTIFICATION_TYPES } from "@/modules/notifications/types/notification.types";
+import { TweetReplySubject, TweetViewSubject } from "@/modules/notifications/types/notification_events.types";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
@@ -32,10 +33,13 @@ import {
 @Injectable()
 export class TweetsService implements OnModuleDestroy{
   @InjectRepository(Tweet)
-  private readonly tweetsRepository: Repository<Tweet>;
 
+  private readonly tweetsRepository: Repository<Tweet>;
   @InjectRepository(Notification)
   private readonly notificationsRepository: Repository<Notification>;
+
+  @InjectRepository(TweetsViews)
+  private readonly tweetsViewsRepository: Repository<TweetsViews>;
 
   constructor(
     private readonly usersService: UsersService,
@@ -45,7 +49,8 @@ export class TweetsService implements OnModuleDestroy{
     private readonly eventEmitter: EventEmitter2
   ) {}
   
-  private readonly tweetRepliesSubject$ = new Subject<TweetReplySubject>()
+  private readonly tweetRepliesSubject$ = new Subject<TweetReplySubject>();
+  private readonly tweetViewsSubject$ = new Subject<TweetViewSubject>();
 
   async createTweet(
     authUser: User, 
@@ -63,7 +68,7 @@ export class TweetsService implements OnModuleDestroy{
           .createQueryBuilder('tweet')
           .leftJoinAndSelect('tweet.user', 'user')
           .where('tweet.id = :parent_id', { parent_id: parseInt(body.parent_id) })
-          .select(['user.id', 'user.notifications_count', 'tweet'])
+          .select(['user.id', 'user.notifications_count', 'user.username', 'tweet'])
           .getOne();
 
         if (!parent_tweet) throw new BadRequestException(messageParentTweetDoesNotExist);
@@ -71,7 +76,7 @@ export class TweetsService implements OnModuleDestroy{
         parent_tweet.user.notifications_count += 1;
         parent_tweet.replies_count += 1;
 
-        await queryRunner.manager.save(parent_tweet);
+        await queryRunner.manager.save(Tweet, parent_tweet);
         await queryRunner.manager.save(User, parent_tweet.user);
       } 
       
@@ -81,7 +86,7 @@ export class TweetsService implements OnModuleDestroy{
         parent_tweet
       });
 
-      await queryRunner.manager.save(tweet);
+      await queryRunner.manager.save(Tweet, tweet);
       
       const media = [] as Array<Media>; 
       
@@ -106,16 +111,17 @@ export class TweetsService implements OnModuleDestroy{
       }
 
       await queryRunner.commitTransaction();
-
-      if (body.parent_id && parent_tweet) {
+    
+      if (body.parent_id && parent_tweet && parent_tweet.user.username !== authUser.username) {
         const eventPayload: TweetReplySubject = { 
-          event: NotificationTypes.REPLY, 
+          event: NOTIFICATION_TYPES.REPLY, 
           authUserUsername: authUser.username,
-          eventTargetUsername: parent_tweet.user.username 
+          eventTargetUsername: parent_tweet.user.username,
+          tweetId: parent_tweet.id 
         } 
         
         const newNotification = this.notificationsRepository.create({
-          type: NotificationTypes.REPLY,
+          type: NOTIFICATION_TYPES.REPLY,
           text: body.text_body,
           action_user: { id: authUser.id },
           target_user: { id: parent_tweet.user.id },
@@ -135,7 +141,6 @@ export class TweetsService implements OnModuleDestroy{
         successMessage: "Your tweet was sent",
       }
     } catch(err) {
-      console.log(err)
       await queryRunner.rollbackTransaction()
       throw new InternalServerErrorException(messageTweetCouldNotBeCreated);
     } finally {
@@ -201,7 +206,7 @@ export class TweetsService implements OnModuleDestroy{
     }
   }
 
-  async getTweet(targetUsername: string, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
+  async getTweet(authUser: User, targetUsername: string, tweetId: number, take = TWEET_PAGINATION_TAKE): Promise<ITweetResponse> {
     const user = await this.usersService.findUser(targetUsername);
     if(!user) throw new BadRequestException(messageUserNotFound);
 
@@ -209,11 +214,14 @@ export class TweetsService implements OnModuleDestroy{
       where: { 
         id: tweetId 
       }, 
-      relations: ['media', 'user', 'likes', 'likes.user'],
+      relations: ['media', 'user.followed', 'likes', 'likes.user'],
       ...tweetPropertiesSelect,
     });
     
     if (!tweet) throw new BadRequestException(messageTweetNotFound);
+
+    const amIfollowingTweetOwner = tweet.user.followed.some(user => user.username === authUser.username);
+    tweet["amIfollowingTweetOwner"] = amIfollowingTweetOwner;
 
     const tweets = await this.getTweetReplies(targetUsername, tweet.id, 0, take);
     const hasMore = tweets.length > take;
@@ -245,6 +253,83 @@ export class TweetsService implements OnModuleDestroy{
     return this._setTweetsMetadata(tweets, username);
   }
 
+  async viewTweet(authUser: User, tweetId: number): Promise<void> {
+    const tweet = await this.tweetsRepository.findOne({ 
+      where: {
+        id: tweetId 
+      },
+      relations: { user: true },
+      select: {
+        id: true,
+        views_count: true,
+        user: {
+          id: true,
+          username: true
+        }
+      }
+    });
+
+    if (!tweet) throw new BadRequestException(messageTweetNotFound);
+
+    const findView = await this.tweetsViewsRepository.findOne({
+      where: {
+        user: { id: authUser.id },
+        tweet: { id: tweet.id }
+      },
+    });
+
+    if (findView) return;
+
+    const queryRunner = this.dataSource.createQueryRunner(); 
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // could cache event in redis and check there, if is then i dont do anything otherwise i add + 1 without creating another row
+      // could just add another column specifing how many views did this user add to the tweet in tweets_views 
+      const newView = queryRunner.manager.create(TweetsViews, {
+        user: { id: authUser.id },
+        tweet
+      });
+
+      tweet.views_count += 1;
+
+      await queryRunner.manager.save(TweetsViews, newView);
+      await queryRunner.manager.save(Tweet, tweet);
+
+      await queryRunner.commitTransaction();
+      // if i send the view event
+      const eventPayload: TweetViewSubject = { 
+        event: NOTIFICATION_TYPES.VIEW, 
+        authUserUsername: authUser.username,
+        eventTargetUsername: tweet.user.username,
+        tweetId 
+      } 
+
+      this.eventEmitter.emit('new.notification', { 
+        eventPayload, 
+        subject$: this.tweetViewsSubject$, 
+        repository: this.tweetsViewsRepository, 
+        entity: newView 
+      });
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(err?.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+  
+  async deleteTweet(authUser: User, tweetId: number): Promise<void> {
+    const result = await this.tweetsRepository.delete({
+      id: tweetId,
+      user: { id: authUser.id }
+    });
+
+    if (result.affected == 0) throw new BadRequestException("Could not delete this tweet, unable to find tweet or you're not the owner");
+  }
+
   _setTweetsMetadata(tweets: Array<Tweet>, username: string) {
     const timestamp = new Date().getTime();
 
@@ -272,17 +357,12 @@ export class TweetsService implements OnModuleDestroy{
     });
   }
 
-  async deleteTweet(authUser: User, tweetId: number): Promise<void> {
-    const result = await this.tweetsRepository.delete({
-      id: tweetId,
-      user: { id: authUser.id }
-    });
-
-    if (result.affected == 0) throw new BadRequestException("Could not delete this tweet, unable to find tweet or you're not the owner");
-  }
-
   tweetsRepliesObservable() {
     return this.tweetRepliesSubject$.asObservable();
+  }
+
+  tweetsViewsObservable() {
+    return this.tweetViewsSubject$.asObservable();
   }
 
   onModuleDestroy() {
