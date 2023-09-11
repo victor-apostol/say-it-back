@@ -9,7 +9,7 @@ import {
   UploadedFiles, 
   UseGuards, 
   UseInterceptors, 
-  Query
+  Query,
 } from "@nestjs/common";
 import { JwtGuard } from "src/modules/auth/guards/auth.guard";
 import { usersPath } from "../constants";
@@ -19,7 +19,7 @@ import { ActionsDto, FriendshipDto } from "../dto/friendship.dto";
 import { User } from "../entities/user.entity";
 import { UpdateProfileDto } from "../dto/updateProfile.dto";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
-import { imageExtensionsWhitelist, imageMaxSizeInBytes, videoExtensionsWhitelist, videoMaxSizeInBytes } from "@/modules/media/constants";
+import { imageExtensionsWhitelist, imageMaxSizeInBytes, } from "@/modules/media/constants";
 import { IUpdateProfileResponse } from "../interfaces/updateProfileResponse.interface";
 import { MultipleMediaValidator } from "@/modules/media/validators/multipleMedia.validator";
 import { SearchUsersDto } from "../dto/searchUsers.dto";
@@ -29,7 +29,7 @@ import { GetFollowersDto } from "../dto/getFollowers.dto";
 @UseGuards(JwtGuard)
 @Controller(usersPath)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+constructor(private readonly usersService: UsersService) {}
 
   @Get("/follows-recomandation")
   async followsRecomandation(@AuthUser() user: User): Promise<Array<User>> {

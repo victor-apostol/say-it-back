@@ -2,6 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColum
 import { User } from "@/modules/users/entities/user.entity";
 import { Like } from "@/modules/likes/entities/like.entity";
 import { Media } from "@/modules/media/entities/media.entity";
+import { Bookmark } from "./bookmark.entity";
 
 @Entity('tweets')
 export class Tweet {
@@ -19,9 +20,15 @@ export class Tweet {
 
   @Column({ type: 'integer', default: 0})
   views_count: number;
+
+  @Column({ type: 'integer', default: 0})
+  bookmarks_count: number;
   
   @OneToMany(() => Like, (like) => like.tweet, { cascade: true })
   likes: Like[];
+
+  @OneToMany(() => Bookmark, (bookmark) => bookmark.tweet, { cascade: true })
+  bookmarks: Bookmark[];
   
   @OneToMany(() => Media, (media) => media.tweet, { cascade: true })
   media: Media[];

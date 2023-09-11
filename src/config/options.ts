@@ -12,9 +12,10 @@ import { TweetsViews } from "@/modules/tweets/entities/tweetsViews.entity";
 //import { LikeEventSubscriber } from "@/modules/likes/entities/like.event.subscriber";
 import * as Joi from 'joi';
 import { RedisAsyncModuleOptions } from "@/modules/redis/redis.types";
+import { Bookmark } from "@/modules/tweets/entities/bookmark.entity";
 
 export const entitiesToLoad = [
-  User, Tweet, Media, Like, Notification, TweetsViews
+  User, Tweet, Media, Like, Notification, TweetsViews, Bookmark
 ]
 
 export const typeormOptions: TypeOrmModuleAsyncOptions = {

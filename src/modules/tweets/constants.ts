@@ -10,6 +10,13 @@ export const tweetPropertiesSelect = {
         id: true,
         username: true
       }
+    },
+    bookmarks: {
+      id: true,
+      user: {
+        id: true,
+        username: true
+      }
     }
   },
 }

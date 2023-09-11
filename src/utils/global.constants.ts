@@ -3,3 +3,7 @@ export const messageTweetCouldNotBeCreated = "Tweet could not be created, try ag
 export const messageParentTweetDoesNotExist = "Parent tweet does not exist";
 export const messageUserNotFound = "User not found";
 export const messageUnableToUpdateProfile = "Unable to update the profile information";
+export const messageBookmarkNotFoundOrYourNotTheOwner = "Unable to find the bookmark, or you're not the owner of the bookmark";
+export const messageTweetNotFoundOrYourNotTheOwner = "Could not delete this tweet, unable to find tweet or you're not the owner";
+export const messageTweetIsAlreadyBookmarked = "You already have this tweet bookmarked";
+export const messageCouldNotDeleteBookmarks = "Unable to delete you're bookmarks, please try again later";

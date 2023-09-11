@@ -1,7 +1,7 @@
 import { IsNumber, Min } from "class-validator";
 
-export class CreateLikeDto {  
+export class CreateBookmarkDto {
   @IsNumber()
   @Min(0)
-  tweetId: number;
+  tweetId: number; 
 }

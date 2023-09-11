@@ -11,6 +11,7 @@ import { Subject } from "rxjs";
 import { Notification } from "@/modules/notifications/notification.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { Tweet } from "../entities/tweet.entity";
+import { Bookmark } from "../entities/bookmark.entity";
 import { Media } from "@/modules/media/entities/media.entity";
 import { TweetsViews } from "../entities/tweetsViews.entity";
 import { UsersService } from "@/modules/users/services/users.service";
@@ -24,22 +25,29 @@ import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
 import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
+  messageBookmarkNotFoundOrYourNotTheOwner,
+  messageCouldNotDeleteBookmarks,
   messageParentTweetDoesNotExist, 
   messageTweetCouldNotBeCreated, 
+  messageTweetIsAlreadyBookmarked, 
   messageTweetNotFound, 
+  messageTweetNotFoundOrYourNotTheOwner, 
   messageUserNotFound 
 } from "@/utils/global.constants";
 
 @Injectable()
 export class TweetsService implements OnModuleDestroy{
   @InjectRepository(Tweet)
-
   private readonly tweetsRepository: Repository<Tweet>;
+
   @InjectRepository(Notification)
   private readonly notificationsRepository: Repository<Notification>;
 
   @InjectRepository(TweetsViews)
   private readonly tweetsViewsRepository: Repository<TweetsViews>;
+
+  @InjectRepository(Bookmark)
+  private readonly bookmarksRepository: Repository<Bookmark>;
 
   constructor(
     private readonly usersService: UsersService,
@@ -150,19 +158,20 @@ export class TweetsService implements OnModuleDestroy{
 
   async getFeedTweets(authUser: User, offset = 0, take = TWEET_PAGINATION_TAKE): Promise<IPaginatedTweets> {
      //if(followingList.length > 0) go ahead and show those otherwise fetch top tweets
-    const followingListTweets = await this.tweetsRepository
+     const followingListTweets = await this.tweetsRepository
       .createQueryBuilder("tweet")
       .leftJoinAndSelect('tweet.likes', 'likes')
+      .leftJoinAndSelect('tweet.bookmarks', 'bookmarks')
+      .leftJoin('bookmarks.user', 'user_bookmarks')
       .leftJoin('likes.user', 'user_likes')
       .leftJoinAndSelect('tweet.media', 'media')
       .innerJoinAndSelect("tweet.user", "user")
       .innerJoin("user.followed", "followed")
       .where("followed.id = :id", { id: authUser.id })
       .andWhere("tweet.parent_tweet IS NULL")
-      .addSelect(['user_likes.id', 'user_likes.username'])
+      .addSelect(['user_likes.id', 'user_likes.username', 'user_bookmarks.id', 'user_bookmarks.username'])
       .skip(offset)
       .take(take + 1)
-      // .orderBy('RANDOM()')
       .orderBy('tweet.created_at', 'DESC')
       .getMany()
 
@@ -186,7 +195,7 @@ export class TweetsService implements OnModuleDestroy{
         user: { id: user.id }, 
         parent_tweet: IsNull()       
       },
-      relations: ['media', 'user', 'likes', 'likes.user'],
+      relations: ['media', 'user', 'likes', 'likes.user', 'bookmarks', 'bookmarks.user'],
       ...tweetPropertiesSelect,
       skip: offset,
       take: take + 1,
@@ -214,7 +223,7 @@ export class TweetsService implements OnModuleDestroy{
       where: { 
         id: tweetId 
       }, 
-      relations: ['media', 'user.followed', 'likes', 'likes.user'],
+      relations: ['media', 'user.followed', 'likes', 'likes.user', 'bookmarks', 'bookmarks.user'],
       ...tweetPropertiesSelect,
     });
     
@@ -238,7 +247,7 @@ export class TweetsService implements OnModuleDestroy{
       where: {
         parent_tweet: { id: tweetId } 
       },
-      relations: ['media', 'user', 'likes', 'likes.user'],
+      relations: ['media', 'user', 'likes', 'likes.user', 'bookmarks', 'bookmarks.user'],
       ...tweetPropertiesSelect,
       skip: offset,
       take: take + 1,
@@ -261,7 +270,6 @@ export class TweetsService implements OnModuleDestroy{
       relations: { user: true },
       select: {
         id: true,
-        views_count: true,
         user: {
           id: true,
           username: true
@@ -290,7 +298,7 @@ export class TweetsService implements OnModuleDestroy{
       // could just add another column specifing how many views did this user add to the tweet in tweets_views 
       const newView = queryRunner.manager.create(TweetsViews, {
         user: { id: authUser.id },
-        tweet
+        tweet: { id: tweet.id }
       });
 
       tweet.views_count += 1;
@@ -299,7 +307,7 @@ export class TweetsService implements OnModuleDestroy{
       await queryRunner.manager.save(Tweet, tweet);
 
       await queryRunner.commitTransaction();
-      // if i send the view event
+
       const eventPayload: TweetViewSubject = { 
         event: NOTIFICATION_TYPES.VIEW, 
         authUserUsername: authUser.username,
@@ -327,7 +335,91 @@ export class TweetsService implements OnModuleDestroy{
       user: { id: authUser.id }
     });
 
-    if (result.affected == 0) throw new BadRequestException("Could not delete this tweet, unable to find tweet or you're not the owner");
+    if (result.affected == 0) throw new BadRequestException(messageTweetNotFoundOrYourNotTheOwner);
+  }
+
+  async getBookmarks(authUser: User, offset = 0, take = 50): Promise<{tweets: Array<Tweet>, hasMore: boolean}> {
+    const bookmarks = await this.bookmarksRepository.find({
+      where: { 
+        user: { id: authUser.id }
+      },
+      relations: ['tweet', 'tweet.media', 'tweet.user', 'tweet.likes', 'tweet.likes.user', 'tweet.bookmarks', 'tweet.bookmarks.user'],
+      take: take + 1,
+      skip: offset
+    });
+    
+    const hasMore = bookmarks.length > take;
+    if (hasMore) bookmarks.splice(-1);
+
+    const tweets = bookmarks.map(bookmark => {
+      return this._setTweetsMetadata([bookmark.tweet], authUser.username)[0];
+    });
+
+    return {
+      tweets: tweets,
+      hasMore
+    }
+  }
+
+  async addBookmark(authUser: User, tweetId: number): Promise<Bookmark> {
+    const queryRunner = this.dataSource.createQueryRunner(); 
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const tweet = await queryRunner.manager.findOne(Tweet, {
+        where: { id: tweetId },
+        select: ['id', 'bookmarks_count']
+      });
+
+      if (!tweet) throw new BadRequestException(messageTweetNotFound);
+
+      const bookmark = await queryRunner.manager.findOne(Bookmark, {
+        where: { 
+          tweet: { id: tweet.id },
+          user: { id: authUser.id }
+        }
+      });
+
+      if (bookmark) throw new BadRequestException(messageTweetIsAlreadyBookmarked);
+
+      let newBookmark = queryRunner.manager.create(Bookmark, {
+        user: { id: authUser.id },
+        tweet: { id: tweet.id }
+      });
+
+      tweet.bookmarks_count = tweet.bookmarks_count + 1;
+
+      await queryRunner.manager.save(Tweet, tweet);
+      newBookmark = await queryRunner.manager.save(Bookmark, newBookmark);
+
+      await queryRunner.commitTransaction();
+
+      return newBookmark;
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(err?.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async deleteBookmark(authUser: User, bookmarkId: number): Promise<void> {
+    const bookmark = await this.bookmarksRepository.delete(
+      {
+        user: { id: authUser.id },
+        id: bookmarkId
+      }, 
+    );
+
+    if (bookmark.affected == 0) throw new BadRequestException(messageBookmarkNotFoundOrYourNotTheOwner);
+  }
+
+  async deleteAllBookmarks(authUser: User): Promise<void> {
+    const deleteResult = await this.bookmarksRepository.delete({ user: { id: authUser.id }});
+
+    if (deleteResult.affected == 0) throw new BadRequestException(messageCouldNotDeleteBookmarks);
   }
 
   _setTweetsMetadata(tweets: Array<Tweet>, username: string) {
@@ -345,11 +437,19 @@ export class TweetsService implements OnModuleDestroy{
             : tweet['timestamp_diff'] = Math.floor(diffInMilliseconds / 86400000) + 'd';
       
       tweet['liked'] = false;
+      tweet['bookmarked'] = false;
 
       for (let i = 0; i < tweet.likes.length; i++) {
         if (tweet.likes[i].user.username === username) {
           tweet['liked'] = true;
           tweet['likeId'] = tweet.likes[i].id;
+        }
+      }
+
+      for (let i = 0; i < tweet.bookmarks.length; i++) {
+        if (tweet.bookmarks[i].user.username === username) {
+          tweet['bookmarked'] = true;
+          tweet['bookmarkId'] = tweet.bookmarks[i].id;
         }
       }
 
