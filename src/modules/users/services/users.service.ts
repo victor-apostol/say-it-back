@@ -133,14 +133,6 @@ export class UsersService implements OnModuleDestroy {
       ? {...returnObject, amIfollowing: amIfollowing} 
       : returnObject; 
   }
-  
-  getFriendshipActionsObservable() {
-    return this.friendshipAction$.asObservable();
-  }
-
-  onModuleDestroy() {
-    this.friendshipAction$.complete();
-  }
 
   async followsRecomandation(user: User): Promise<Array<User>> {
     const authUser = await this.userRepository
@@ -362,6 +354,14 @@ export class UsersService implements OnModuleDestroy {
     });
 
     return searchResult as Array<User>;
+  }
+
+  getFriendshipActionsObservable() {
+    return this.friendshipAction$.asObservable();
+  }
+
+  onModuleDestroy() {
+    this.friendshipAction$.complete();
   }
 }
 

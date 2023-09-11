@@ -1,5 +1,4 @@
 import { 
-  BadRequestException,
   Body, 
   Controller, 
   Delete, 
@@ -19,6 +18,7 @@ import { JwtGuard } from "src/modules/auth/guards/auth.guard";
 import { TweetsService } from "../services/tweets.service";
 import { StorageService } from "@/modules/media/services/storage.service";
 import { Tweet } from "../entities/tweet.entity";
+import { Bookmark } from "../entities/bookmark.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
 import { PaginationDto } from "@/utils/global/pagination.dto";
@@ -26,8 +26,15 @@ import { MediaValidator } from "@/modules/media/validators/media.validator";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { AuthUser } from "src/utils/decorators/authUser.decorator";
-import { imageExtensionsWhitelist, imageMaxSizeInBytes, maxFilesCount, videoExtensionsWhitelist, videoMaxSizeInBytes } from "@/modules/media/constants";
 import { tweetsPath } from "../constants";
+import { 
+  imageExtensionsWhitelist, 
+  imageMaxSizeInBytes, 
+  maxFilesCount, 
+  videoExtensionsWhitelist, 
+  videoMaxSizeInBytes 
+} from "@/modules/media/constants";
+import { CreateBookmarkDto } from "../dto/createBookmarkDto";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
@@ -61,6 +68,10 @@ export class TweetsController {
   ): Promise<ITweetResponse> { 
     return await this.tweetsService.getTweet(user, targetUsername, tweetId);
   } 
+  @Get("/user-bookmarks")
+  async getUserBookmarks(@AuthUser() user: User, @Query() query: PaginationDto): Promise<{ tweets: Array<Tweet>, hasMore: boolean}> {
+    return await this.tweetsService.getBookmarks(user, query.offset, query.take);
+  }
   
   @Get('/replies/:tweetId')
   async getTweetReplies(
@@ -69,6 +80,11 @@ export class TweetsController {
     @Query() query: PaginationDto
   ): Promise<{ tweets: Array<Tweet> }>  { 
     return { tweets: await this.tweetsService.getTweetReplies(user.username, tweetId, query.offset, query.take) }
+  }
+
+  @Post("/bookmark")
+  async addBookmark(@AuthUser() user: User, @Body() body: CreateBookmarkDto): Promise<Bookmark> {
+    return await this.tweetsService.addBookmark(user, body.tweetId);
   }
 
   @Post('/view')
@@ -103,8 +119,18 @@ export class TweetsController {
     return await this.tweetsService.createTweet(authUser, body, files);
   }
 
+  @Delete('/bookmark/:bookmarkId')
+  async deleteBookmark(@AuthUser() user: User, @Param('bookmarkId', ParseIntPipe) bookmarkId: number): Promise<void> {
+    return await this.tweetsService.deleteBookmark(user, bookmarkId);
+  }
+
+  @Delete('/bookmarks')
+  async deleteAllBookmarks(@AuthUser() user: User): Promise<void> {
+    return await this.tweetsService.deleteAllBookmarks(user);
+  }
+
   @Delete('/:tweetId')
   async deleteTweet(@AuthUser() user: User, @Param('tweetId', ParseIntPipe) tweetId: number): Promise<void> {
-    return this.tweetsService.deleteTweet(user, tweetId);
+    return await this.tweetsService.deleteTweet(user, tweetId);
   }
 }
