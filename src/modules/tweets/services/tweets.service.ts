@@ -23,7 +23,7 @@ import { TweetReplySubject, TweetViewSubject } from "@/modules/notifications/typ
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
 import { MEDIA_TYPES_SIZES } from "@/modules/media/constants";
-import { TWEET_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
+import { TWEET_PAGINATION_TAKE, TWEET_REPLIES_USERS_PAGINATION_TAKE, tweetPropertiesSelect } from "../constants";
 import { 
   messageBookmarkNotFoundOrYourNotTheOwner,
   messageCouldNotDeleteBookmarks,
@@ -467,5 +467,6 @@ export class TweetsService implements OnModuleDestroy{
 
   onModuleDestroy() {
     this.tweetRepliesSubject$.complete();
+    this.tweetViewsSubject$.complete();
   }
 }

@@ -4,3 +4,4 @@ node_modules
 .vscode/
 migrations/
 postgres-configMap.yaml
+postgres-config-map.yaml

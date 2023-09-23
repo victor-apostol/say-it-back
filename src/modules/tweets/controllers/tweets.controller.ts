@@ -22,6 +22,7 @@ import { Bookmark } from "../entities/bookmark.entity";
 import { User } from "@/modules/users/entities/user.entity";
 import { CreateTweetDto } from "../dto/createTweet.dto";
 import { PaginationDto } from "@/utils/global/pagination.dto";
+import { CreateBookmarkDto } from "../dto/createBookmarkDto";
 import { MediaValidator } from "@/modules/media/validators/media.validator";
 import { IPaginatedTweets } from "../interfaces/paginateTweets.interface";
 import { ITweetResponse } from "../interfaces/TweetResponse.interface";
@@ -34,7 +35,6 @@ import {
   videoExtensionsWhitelist, 
   videoMaxSizeInBytes 
 } from "@/modules/media/constants";
-import { CreateBookmarkDto } from "../dto/createBookmarkDto";
 
 @UseGuards(JwtGuard)
 @Controller(tweetsPath)
@@ -69,7 +69,10 @@ export class TweetsController {
     return await this.tweetsService.getTweet(user, targetUsername, tweetId);
   } 
   @Get("/user-bookmarks")
-  async getUserBookmarks(@AuthUser() user: User, @Query() query: PaginationDto): Promise<{ tweets: Array<Tweet>, hasMore: boolean}> {
+  async getUserBookmarks(
+    @AuthUser() user: User,
+    @Query() query: PaginationDto
+  ): Promise<{ tweets: Array<Tweet>, hasMore: boolean}> {
     return await this.tweetsService.getBookmarks(user, query.offset, query.take);
   }
   

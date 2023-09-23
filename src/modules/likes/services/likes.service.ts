@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Subject } from "rxjs";
@@ -12,6 +12,7 @@ import { TweetLikeSubject } from "@/modules/notifications/types/notification_eve
 import { messageTweetIsAlreadyLiked } from "../constants";
 import { messageTweetNotFound } from "@/utils/global.constants";
 import { User } from "@/modules/users/entities/user.entity";
+import { TWEET_LIKES_PAGINATION_TAKE } from "@/modules/tweets/constants";
 
 @Injectable()
 export class LikesService {
@@ -24,12 +25,69 @@ export class LikesService {
   @InjectRepository(Notification)
   private readonly notificationsRepository: Repository<Notification>;
 
+  @InjectRepository(User)
+  private readonly usersRepository: Repository<User>;
+
   constructor(
     private readonly dataSource: DataSource, 
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {}
     
-  private readonly likesSubject$ = new Subject<TweetLikeSubject | string>()
+  private readonly likesSubject$ = new Subject<TweetLikeSubject | string>();
+
+  async getTweetLikes(
+    authUserId: number, 
+    tweetId: number, 
+    skip = 0, 
+    take = TWEET_LIKES_PAGINATION_TAKE
+  ): Promise<{likes: Array<Like>, hasMore: boolean}> {
+    let likes = await this.likeRepository.find({
+      where: {
+        tweet: { id: tweetId }
+      },
+      relations: ['user'],
+      select: {
+        user: { 
+          id: true, 
+          username: true, 
+          background: true, 
+          avatar: true, 
+          bio: true 
+        }
+      },
+      skip: skip,
+      take: take + 1
+    });
+    
+    const hasMore = likes.length > take;
+    if (hasMore) likes.splice(-1);
+
+    const myFollowings = await this.usersRepository.findOne({
+      where: {
+        id: authUserId
+      },
+      relations: { following: true },
+      select: { 
+        following: { 
+          id: true, username: true 
+        }
+      }
+    });
+
+    if (!myFollowings) throw new InternalServerErrorException();
+
+    likes = likes.map(like => {
+      const amIfollowingUser = myFollowings.following.some(following => like.user.username === following.username);
+
+      like["amIfollowingUser"] = amIfollowingUser;
+      return like;
+    })
+
+    return {
+      likes,
+      hasMore
+    }
+  }
   
   async createLike(authUser: User, body: CreateLikeDto): Promise<Tweet & { likeId: number }> { 
     const queryRunner = this.dataSource.createQueryRunner(); 
