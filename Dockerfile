@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN apt update && apt install vim -y
-
 RUN npm install
 
 COPY . .

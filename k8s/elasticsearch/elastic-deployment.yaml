@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elastic
+spec:
+  selector:
+    matchLabels:
+      app: elastic
+  template:
+    metadata:
+      labels:
+        app: elastic
+    spec:
+      containers:
+        - name: elastic
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.10.1
+          ports:
+            - containerPort: 9200
+          envFrom:
+            - configMapRef:
+                name: elastic-config-map
+
