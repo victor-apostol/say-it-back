@@ -5,3 +5,5 @@ node_modules
 migrations/
 postgres-configMap.yaml
 postgres-config-map.yaml
+configs/
+.env.copy
