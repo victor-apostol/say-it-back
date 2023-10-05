@@ -1,4 +1,5 @@
 .env
+.env.copy
 dist/
 node_modules
 .vscode/
